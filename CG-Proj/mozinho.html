@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Convite Especial 💖</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #ffdee9, #b5fffc);
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .convite {
+      position: relative;
+      background-color: white;
+      padding: 40px 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 350px;
+      height: 300px;
+      overflow: hidden;
+    }
+
+    .convite h1 {
+      color: #ff4081;
+      margin: 0 0 10px;
+    }
+
+    .convite p {
+      font-size: 18px;
+      color: #333;
+      margin: 10px 0;
+    }
+
+    .botao {
+      padding: 12px 24px;
+      background-color: #ff4081;
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+      position: absolute;
+    }
+
+    .botao:hover {
+      background-color: #e91e63;
+    }
+
+    #rodape {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      font-size: 14px;
+      color: #999;
+    }
+
+    #catGif {
+      margin-top: 15px;
+      width: 100px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="convite" id="convite">
+    <h1>Para Piquinina 💖</h1>
+    <p id="pergunta">Mohh, queres vir à gala comigo?</p>
+    
+    <button class="botao" id="botao" onclick="moverBotao()" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">Sim, aceito! 😍</button>
+    
+    <p id="rodape" style="font-weight: bold; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);">Se não conseguires clicar, é porque não és o meu amor! 😡</p>
+
+    <img id="catGif" src="https://media.tenor.com/DpJdyKQKgYkAAAAi/cat-jump.gif" alt="Gato feliz pulando">
+  </div>
+
+  <script>
+    const perguntas = [
+      "Não achas que só isto chega? 🤔",
+      "Tens mesmo a certeza que queres vir comigo? 😏",
+      "Prometes beber muito comigo? 🍺",
+      "Vamos nos comer... no buffet? 😋",
+      "Última chance de dizer sim... 😘"
+    ];
+
+    let contador = 0;
+
+    function moverBotao() {
+      const convite = document.getElementById("convite");
+      const botao = document.getElementById("botao");
+      const pergunta = document.getElementById("pergunta");
+      const rodape = document.getElementById("rodape");
+      const catGif = document.getElementById("catGif");
+
+      if (contador === 0 && rodape) {
+        rodape.remove(); // Remove rodapé no primeiro clique
+      }
+
+      if (contador < perguntas.length) {
+        pergunta.innerText = perguntas[contador];
+
+        // Área segura
+        const containerWidth = convite.clientWidth;
+        const containerHeight = convite.clientHeight;
+        const botaoWidth = botao.offsetWidth;
+        const botaoHeight = botao.offsetHeight;
+
+        const maxX = containerWidth - botaoWidth;
+        const maxY = containerHeight - botaoHeight - 80;
+
+        const posX = Math.random() * maxX;
+        const posY = 100 + Math.random() * (maxY - 100);
+
+        botao.style.left = `${posX}px`;
+        botao.style.top = `${posY}px`;
+
+        contador++;
+      } else {
+        pergunta.innerText = "ENTÃO PREPARA-TE PARA UMA NOITE LOUCAAA... ❤️ Tamill piquinina! ❤️";
+        botao.style.display = "none";
+        catGif.style.display = "block"; // Mostra o gif
+      }
+    }
+  </script>
+</body>
+</html>

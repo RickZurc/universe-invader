@@ -1,0 +1,195 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universe Invader</title>
+    <style>
+      #score {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        z-index: 100;
+      }
+
+      #round {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        z-index: 100;
+      }
+
+      #health-container {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 200px;
+        height: 20px;
+        background-color: #333;
+        border: 2px solid #666;
+        z-index: 100;
+      }
+
+      #health-bar {
+        width: 100%;
+        height: 100%;
+        background-color: #0f0;
+        transition: width 0.3s;
+      }
+
+      #store-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.9);
+        padding: 20px;
+        border: 2px solid #666;
+        border-radius: 10px;
+        color: white;
+        z-index: 1000;
+        min-width: 300px;
+      }
+
+      .upgrade-button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        background-color: #444;
+        border: 1px solid #666;
+        color: white;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      .upgrade-button:hover {
+        background-color: #555;
+      }
+
+      .upgrade-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #continue-button {
+        background-color: #007700;
+      }
+
+      .enemy-health-container {
+        position: fixed;
+        width: 40px;
+        height: 4px;
+        background-color: #333;
+        border: 1px solid #666;
+        pointer-events: none;
+        z-index: 100;
+    }
+
+    .enemy-health-bar {
+        width: 100%;
+        height: 100%;
+        background-color: #f00;
+        transition: width 0.2s;
+    }
+
+    #debug-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.95);
+        padding: 20px;
+        border: 2px solid #00ff00;
+        color: #00ff00;
+        font-family: monospace;
+        z-index: 1000;
+        min-width: 300px;
+    }
+
+    .debug-input {
+        background: #001100;
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        padding: 5px;
+        margin: 5px 0;
+        width: 100%;
+    }
+
+    .debug-button {
+        background: #003300;
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        padding: 5px 10px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    .debug-button:hover {
+        background: #004400;
+    }
+    </style>
+  </head>
+
+  <body>
+    <div id="score">Score: 0</div>
+    <div id="round">Round: 1</div>
+    <div id="health-container">
+      <div id="health-text" style="color: white;">1000/1000</div>
+      <div id="health-bar"></div>
+  </div>
+    <div id="store-modal">
+      <h2>Upgrade Store</h2>
+      <p id="available-score"></p>
+      <button class="upgrade-button" id="health-upgrade">
+        Upgrade Max Health (Cost: 500)
+      </button>
+      <button class="upgrade-button" id="damage-upgrade">
+        Upgrade Bullet Damage (Cost: 300)
+      </button>
+      <button class="upgrade-button" id="speed-upgrade">
+        Upgrade Movement Speed (Cost: 200)
+      </button>
+      <button class="upgrade-button" id="firerate-upgrade">
+        Increase Fire Rate (Cost: 400)
+      </button>
+      <button class="upgrade-button" id="save-game">
+        Save Game Progress
+      </button>
+      <button class="upgrade-button" id="continue-button">
+        Continue to Next Round
+      </button>
+    </div>
+    <div id="debug-modal">
+        <h2>Debug Menu</h2>
+        <div>
+            <label>Player Health:</label>
+            <input type="number" id="debug-health" class="debug-input">
+        </div>
+        <div>
+            <label>Bullet Damage:</label>
+            <input type="number" id="debug-damage" class="debug-input">
+        </div>
+        <div>
+            <label>Move Speed:</label>
+            <input type="number" id="debug-speed" class="debug-input" step="0.1">
+        </div>
+        <div>
+            <label>Fire Rate:</label>
+            <input type="number" id="debug-firerate" class="debug-input">
+        </div>
+        <button class="debug-button" id="debug-spawn-enemy">Spawn Normal Enemy</button>
+        <button class="debug-button" id="debug-spawn-boss">Spawn Boss</button>
+        <button class="debug-button" id="debug-apply">Apply Changes</button>
+        <button class="debug-button" id="debug-resume">Resume Game</button>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
