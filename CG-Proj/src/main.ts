@@ -1,9 +1,24 @@
+
+
+/*
+
+TO BE ADDED LATER
+
+- Add special ability to the player ship (like homing missiles)
+- Add enemy types with different behaviors (e.g., faster, slower, more health, throw projectiles)
+- Add power-ups that spawn randomly
+
+*/
+
+
+
 import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
-// Game state
-let playerShip: THREE.Mesh
+// Game state variables
+let playerShip: THREE.Group // Change type to Group to hold the loaded model
 let bullets: THREE.Mesh[] = []
 let enemies: Enemy[] = []
 let gameOver = false
@@ -20,48 +35,110 @@ let baseEnemyCols = 5
 let bulletDamage = 100
 let moveSpeed = 0.2
 let isStorePaused = false
-
-// Add after other game state variables
 let canShoot = true
-let fireRate = 200 // Time between shots in milliseconds
+let fireRate = 200
 let lastShotTime = 0
 let isShooting = false
-
-// Enemy spawn variables
-let enemySpawnTimer = 0
-let timeBetweenSpawns = 2000 // 2 seconds between spawns
-let enemiesRemainingToSpawn = 0
-let lastSpawnTime = Date.now()
-
-// Mouse variables
 let mouse = new THREE.Vector2()
 let mouseWorldPosition = new THREE.Vector3()
 
 // Scene setup
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x000000)
-
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-camera.position.set(0, 0, 15)
-camera.lookAt(0, 0, 0)
-
-const renderer = new THREE.WebGLRenderer()
+const renderer = new THREE.WebGLRenderer({ antialias: true })
 renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.setPixelRatio(window.devicePixelRatio)
 document.body.appendChild(renderer.domElement)
+camera.position.z = 30
 
-// Player ship
-const playerGeometry = new THREE.ConeGeometry(1, 2, 3)
-const playerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 })
-playerShip = new THREE.Mesh(playerGeometry, playerMaterial)
+// Lighting setup
+const ambientLight = new THREE.AmbientLight(0x404080, 4) // Increased intensity
+scene.add(ambientLight)
+
+const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1) // Increased intensity
+directionalLight.position.set(0, 1, 1)
+scene.add(directionalLight)
+
+// Create starfield
+const starGeometry = new THREE.BufferGeometry()
+const starVertices = []
+for(let i = 0; i < 10000; i++) {
+    const x = (Math.random() - 0.5) * 2000
+    const y = (Math.random() - 0.5) * 2000
+    const z = -Math.random() * 2000
+    starVertices.push(x, y, z)
+}
+starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3))
+const starMaterial = new THREE.PointsMaterial({ color: 0xFFFFFF, size: 1 })
+const starField = new THREE.Points(starGeometry, starMaterial)
+scene.add(starField)
+
+// Create player ship
+const tempGeometry = new THREE.ConeGeometry(1, 2, 3)
+const tempMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x00ff00,
+    emissive: 0x002200,
+    shininess: 50
+})
+const tempShip = new THREE.Mesh(tempGeometry, tempMaterial)
+playerShip = new THREE.Group()
+playerShip.add(tempShip)
 playerShip.position.y = -8
 scene.add(playerShip)
 
-// Add this enum before the Enemy class
-enum EnemyType {
-    Normal,
-    Boss,
-    Special
-}
+// Load the actual model
+const loader = new GLTFLoader()
+loader.load(
+    '/src/SpaceshipPlayer.glb',
+    (gltf) => {
+        // Remove temporary ship
+        playerShip.remove(tempShip)
+        
+        // Add the loaded model
+        const model = gltf.scene
+        model.scale.set(0.005, 0.005, 0.005) // Adjust scale as needed
+        model.rotation.set(90, Math.PI, 0) // Adjust rotation to face up
+        
+        // Apply materials to the model
+        // model.traverse((child) => {
+        //     if (child instanceof THREE.Mesh) {
+        //         child.material = new THREE.MeshPhongMaterial({
+        //             // color: 0x00ff00,
+        //             // emissive: 0x002200,
+        //             shininess: 50,
+        //         })
+        //     }
+        // })
+        
+        playerShip.add(model)
+        
+        // Re-add thrusters to the new model
+        if (thrusterParticles) {
+            thrusterParticles.position.y = -1.5 // Adjust position for new model
+            playerShip.add(thrusterParticles)
+        }
+    },
+    undefined,
+    (error) => {
+        console.error('An error occurred loading the model:', error)
+    }
+)
+
+// Enemy spawn variables
+let enemySpawnTimer = 0
+let timeBetweenSpawns = 2000
+let enemiesRemainingToSpawn = 0
+let lastSpawnTime = Date.now()
+
+// Replace the enum with this object
+const EnemyType = {
+    Normal: 0,
+    Boss: 1,
+    Special: 2
+} as const
+
+// Add a type for type safety
+type EnemyTypeKey = keyof typeof EnemyType
 
 class Enemy extends THREE.Mesh {
     health: number;
@@ -70,11 +147,26 @@ class Enemy extends THREE.Mesh {
     hitTime: number;
     healthContainer: HTMLDivElement;
     healthBar: HTMLDivElement;
-    enemyType: EnemyType;
+    enemyType: typeof EnemyType[EnemyTypeKey];
     color: string;
 
-    constructor(geometry: THREE.BoxGeometry, material: THREE.MeshBasicMaterial, baseHealth: number, type: EnemyType = EnemyType.Normal) {
-        super(geometry, material);
+    constructor(geometry: THREE.BoxGeometry, material: THREE.MeshBasicMaterial, baseHealth: number, type: typeof EnemyType[EnemyTypeKey] = EnemyType.Normal) {
+        const enemyMaterial = new THREE.MeshPhongMaterial({
+            color: type === EnemyType.Boss ? 0xff0000 : type === EnemyType.Special ? 0x00ffff : 0xff0000,
+            emissive: type === EnemyType.Boss ? 0x440000 : type === EnemyType.Special ? 0x004444 : 0x220000,
+            shininess: 30
+        })
+        super(geometry, enemyMaterial)
+        
+        // Add enemy glow light
+        const enemyLight = new THREE.PointLight(
+            type === EnemyType.Boss ? 0xff0000 : type === EnemyType.Special ? 0x00ffff : 0xff0000,
+            0.5,
+            3
+        )
+        enemyLight.position.set(0, 0, 0)
+        this.add(enemyLight)
+        
         this.health = baseHealth;
         this.maxHealth = baseHealth;
         this.isHit = false;
@@ -194,6 +286,7 @@ function createEnemies() {
     
     lastSpawnTime = Date.now()
     timeBetweenSpawns = Math.max(500, 2000 - (currentRound * 100))
+    updateEnemiesCounter() // Add this
 }
 
 // Spawn single enemy
@@ -237,13 +330,22 @@ function spawnSingleEnemy() {
     enemies.push(enemy)
     scene.add(enemy)
     enemiesRemainingToSpawn--
+    updateEnemiesCounter() // Add this
 }
 
 // Shooting function
 function shoot() {
     const bulletGeometry = new THREE.SphereGeometry(0.2)
-    const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 })
+    const bulletMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xffff00,
+        emissive: 0x444400,
+        shininess: 30
+    })
     const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial)
+    
+    // Add point light to bullet
+    const bulletLight = new THREE.PointLight(0xffff00, 0.5, 3)
+    bullet.add(bulletLight)
     
     const offset = 1
     bullet.position.set(
@@ -292,6 +394,14 @@ function updateHealthBar() {
     }
 }
 
+function updateEnemiesCounter() {
+    const enemiesElement = document.getElementById('enemies-remaining')
+    if (enemiesElement) {
+        const total = enemies.length + enemiesRemainingToSpawn
+        enemiesElement.textContent = `Enemies Remaining: ${total}`
+    }
+}
+
 // Store functions
 function openStore() {
     const modal = document.getElementById('store-modal')
@@ -318,6 +428,11 @@ function closeStore() {
 
 function startNewRound() {
     currentRound++
+    
+    // Restore player health
+    playerHealth = maxHealth
+    updateHealthBar()
+    
     openStore()
 
     document.getElementById('health-upgrade')?.addEventListener('click', () => {
@@ -417,8 +532,11 @@ function updateCamera() {
 }
 
 function updatePlayerRotation() {
+    // Get direction from player to mouse
     const dx = mouseWorldPosition.x - playerShip.position.x
     const dy = mouseWorldPosition.y - playerShip.position.y
+    
+    // Calculate angle and set ship rotation
     const angle = Math.atan2(dy, dx)
     playerShip.rotation.z = angle - Math.PI / 2
 }
@@ -527,21 +645,107 @@ document.addEventListener('keyup', (event) => {
 document.addEventListener('mousemove', (event) => {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
-
-    const vector = new THREE.Vector3(mouse.x, mouse.y, 0.5)
-    vector.unproject(camera)
-    
-    const dir = vector.sub(camera.position).normalize()
-    const distance = -camera.position.z / dir.z
-    
-    mouseWorldPosition.copy(camera.position).add(dir.multiplyScalar(distance))
-    mouseWorldPosition.z = 0
 })
+
+// Add restart game functionality
+document.getElementById('restart-button')?.addEventListener('click', () => {
+    // Reset game state
+    gameOver = false;
+    score = 0;
+    playerHealth = 1000;
+    maxHealth = 1000;
+    currentRound = 1;
+    bulletDamage = 100;
+    moveSpeed = 0.2;
+    fireRate = 200;
+    
+    // Clear existing enemies
+    enemies.forEach(enemy => {
+        scene.remove(enemy);
+        enemy.destroy();
+    });
+    enemies = []
+    updateEnemiesCounter() // Add this
+    
+    // Reset player position
+    playerShip.position.set(0, -8, 0);
+    
+    // Hide game over modal
+    const modal = document.getElementById('gameover-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Reset UI
+    updateScoreDisplay();
+    updateHealthBar();
+    const roundElement = document.getElementById('round');
+    if (roundElement) {
+        roundElement.textContent = `Round: ${currentRound}`;
+    }
+    
+    // Start new game
+    createEnemies()
+})
+
+// Create player light
+const playerLight = new THREE.PointLight(0x00ff00, 2, 15)
+playerLight.position.copy(playerShip.position)
+scene.add(playerLight)
+
+// Create particle system for thrusters
+const thrusterGeometry = new THREE.BufferGeometry()
+const thrusterVertices = new Float32Array(300) // 100 particles * 3 coordinates
+const thrusterColors = new Float32Array(300) // 100 particles * 3 color values
+
+// Initialize particles with random positions
+for (let i = 0; i < 300; i += 3) {
+    thrusterVertices[i] = 0
+    thrusterVertices[i + 1] = 0
+    thrusterVertices[i + 2] = 0
+    
+    // Green to yellow colors for thrust
+    thrusterColors[i] = Math.random() * 0.5 + 0.5 // R: 0.5-1.0
+    thrusterColors[i + 1] = Math.random() * 0.5 + 0.5 // G: 0.5-1.0
+    thrusterColors[i + 2] = 0 // B: 0
+}
+
+thrusterGeometry.setAttribute('position', new THREE.BufferAttribute(thrusterVertices, 3))
+thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3))
+
+const thrusterMaterial = new THREE.PointsMaterial({
+    size: 0.1,
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    opacity: 0.8
+})
+
+const thrusterParticles = new THREE.Points(thrusterGeometry, thrusterMaterial)
+playerShip.add(thrusterParticles)
+thrusterParticles.position.y = -1 // Position behind the ship
 
 // Animation loop
 function animate() {
     requestAnimationFrame(animate)
-    if (gameOver || isStorePaused || isDebugMode) return
+    
+    // Calculate mouse world position
+    const vector = new THREE.Vector3(mouse.x, mouse.y, 0.5)
+    vector.unproject(camera)
+    const dir = vector.sub(camera.position).normalize()
+    const distance = -camera.position.z / dir.z
+    mouseWorldPosition.copy(camera.position).add(dir.multiplyScalar(distance))
+    mouseWorldPosition.z = 0
+    
+    // Always update player rotation
+    updatePlayerRotation()
+    
+    // Game state check
+    if (gameOver || isStorePaused || isDebugMode) {
+        // Still render the scene even when paused
+        renderer.render(scene, camera)
+        return
+    }
 
     const delta = 0.016
 
@@ -551,8 +755,11 @@ function animate() {
     if (moveUp) playerShip.position.y += moveSpeed * delta * 60
     if (moveDown) playerShip.position.y -= moveSpeed * delta * 60
 
-    updatePlayerRotation()
+    // Move camera update here after movement
     updateCamera()
+    
+    // Update player light position
+    playerLight.position.copy(playerShip.position)
     
     // Handle shooting
     if (isShooting && Date.now() - lastShotTime > fireRate) {
@@ -583,9 +790,16 @@ function animate() {
                 bullets.splice(i, 1);
                 
                 if (enemy.health <= 0) {
+                    // Create explosion effect
+                    const explosionColor = enemy.enemyType === EnemyType.Boss ? 0xff0000 : 
+                                          enemy.enemyType === EnemyType.Special ? 0x00ffff : 
+                                          0xff6600
+                    createExplosion(enemy.position.clone(), explosionColor)
+                    
                     scene.remove(enemy);
                     enemy.destroy();
                     enemies.splice(j, 1);
+                    updateEnemiesCounter() // Add this
                     // Different score rewards based on enemy type
                     switch (enemy.enemyType) {
                         case EnemyType.Boss:
@@ -641,7 +855,17 @@ function animate() {
             if (playerHealth <= 0) {
                 gameOver = true;
                 localStorage.removeItem('universeInvaderSave');
-                alert(`Game Over! You reached round: ${currentRound}`);
+                
+                // Show game over modal
+                const modal = document.getElementById('gameover-modal');
+                const finalRound = document.getElementById('final-round');
+                const finalScore = document.getElementById('final-score');
+                
+                if (modal && finalRound && finalScore) {
+                    finalRound.textContent = currentRound.toString();
+                    finalScore.textContent = score.toString();
+                    modal.style.display = 'block';
+                }
             }
         }
     })
@@ -658,6 +882,77 @@ function animate() {
         startNewRound()
     }
 
+    // Animate starfield
+    starField.rotation.z += 0.0001
+    starField.position.x = camera.position.x * 0.3
+    starField.position.y = camera.position.y * 0.3
+
+    // Update thruster particles
+    const positions = thrusterParticles.geometry.attributes.position.array
+    const isMoving = moveUp || moveDown || moveLeft || moveRight
+
+    if (isMoving) {
+        // Move existing particles
+        for (let i = 0; i < positions.length; i += 3) {
+            // Base particle movement
+            const particleSpeed = 0.1
+
+            // Calculate movement direction
+            let xOffset = 0
+            let yOffset = 0
+
+            if (moveUp) yOffset = -particleSpeed
+            if (moveDown) yOffset = particleSpeed
+            if (moveLeft) xOffset = particleSpeed
+            if (moveRight) xOffset = -particleSpeed
+
+            // Move particles based on ship movement
+            positions[i] += xOffset
+            positions[i + 1] += yOffset
+
+            // Reset particles that go too far
+            const distanceFromCenter = Math.sqrt(
+                positions[i] * positions[i] + 
+                positions[i + 1] * positions[i + 1]
+            )
+
+            if (distanceFromCenter > 2) {
+                // Reset to origin with slight randomization
+                positions[i] = (Math.random() - 0.5) * 0.2
+                positions[i + 1] = (Math.random() - 0.5) * 0.2
+                positions[i + 2] = (Math.random() - 0.5) * 0.2
+            }
+        }
+    } else {
+        // Clear all particles when ship is not moving
+        for (let i = 0; i < positions.length; i += 3) {
+            positions[i] = 0
+            positions[i + 1] = 0
+            positions[i + 2] = 0
+        }
+    }
+
+    thrusterParticles.geometry.attributes.position.needsUpdate = true
+
+    // Update particle appearance based on movement
+    thrusterMaterial.opacity = isMoving ? 0.8 : 0
+    thrusterMaterial.size = isMoving ? 0.15 : 0.1
+
+    // Rotate particles container based on movement direction
+    if (isMoving) {
+        let angle = 0
+        if (moveUp && !moveLeft && !moveRight) angle = Math.PI
+        else if (moveDown && !moveLeft && !moveRight) angle = 0
+        else if (moveLeft && !moveUp && !moveDown) angle = -Math.PI/2
+        else if (moveRight && !moveUp && !moveDown) angle = Math.PI/2
+        else if (moveUp && moveLeft) angle = -Math.PI * 3/4
+        else if (moveUp && moveRight) angle = Math.PI * 3/4
+        else if (moveDown && moveLeft) angle = -Math.PI/4
+        else if (moveDown && moveRight) angle = Math.PI/4
+
+        thrusterParticles.rotation.z = angle
+    }
+
     renderer.render(scene, camera)
 }
 
@@ -665,6 +960,75 @@ function animate() {
 if (!loadGame()) {
     createEnemies()
 }
-setupDebugListeners();
+setupDebugListeners()
 updateScoreDisplay()
 animate()
+
+// Add after the Enemy class
+
+function createExplosion(position: THREE.Vector3, color: number) {
+    const particleCount = 50
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(particleCount * 3)
+    const velocities: THREE.Vector3[] = []
+    
+    // Create initial positions and velocities
+    for (let i = 0; i < particleCount * 3; i += 3) {
+        positions[i] = position.x
+        positions[i + 1] = position.y
+        positions[i + 2] = position.z
+        
+        velocities.push(new THREE.Vector3(
+            (Math.random() - 0.5) * 0.3,
+            (Math.random() - 0.5) * 0.3,
+            (Math.random() - 0.5) * 0.3
+        ))
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    
+    const material = new THREE.PointsMaterial({
+        color: color,
+        size: 0.2,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        opacity: 1
+    })
+    
+    const particles = new THREE.Points(geometry, material)
+    scene.add(particles)
+    
+    // Animation variables
+    let life = 1.0
+    const decay = 0.05
+    
+    function animateExplosion() {
+        if (life <= 0) {
+            scene.remove(particles)
+            return
+        }
+        
+        const positions = particles.geometry.attributes.position.array
+        
+        // Update particle positions based on velocities
+        for (let i = 0; i < positions.length; i += 3) {
+            positions[i] += velocities[i/3].x
+            positions[i + 1] += velocities[i/3].y
+            positions[i + 2] += velocities[i/3].z
+            
+            // Add some gravity effect
+            velocities[i/3].y -= 0.01
+        }
+        
+        particles.geometry.attributes.position.needsUpdate = true
+        
+        // Fade out
+        material.opacity = life
+        life -= decay
+        
+        requestAnimationFrame(animateExplosion)
+    }
+    
+    animateExplosion()
+}
+

@@ -4,6 +4,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universe Invader</title>
     <style>
+      body {
+        background: #000000;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      #starfield {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background: radial-gradient(circle at center, rgba(20, 20, 50, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
+      }
+
       #score {
         position: fixed;
         top: 20px;
@@ -135,16 +151,66 @@
     .debug-button:hover {
         background: #004400;
     }
+
+    #gameover-modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.95);
+        padding: 30px;
+        border: 2px solid #ff0000;
+        border-radius: 10px;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        z-index: 1000;
+        min-width: 300px;
+    }
+
+    #gameover-modal h2 {
+        color: #ff0000;
+        margin-top: 0;
+    }
+
+    #restart-button {
+        background-color: #ff0000;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        margin-top: 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    #restart-button:hover {
+        background-color: #cc0000;
+    }
+
+    #enemies-remaining {
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 18px;
+        z-index: 100;
+    }
     </style>
   </head>
 
   <body>
+    <div id="starfield"></div>
     <div id="score">Score: 0</div>
     <div id="round">Round: 1</div>
     <div id="health-container">
       <div id="health-text" style="color: white;">1000/1000</div>
       <div id="health-bar"></div>
-  </div>
+    </div>
+    <div id="enemies-remaining" class="enemies-remaining">
+    </div>
     <div id="store-modal">
       <h2>Upgrade Store</h2>
       <p id="available-score"></p>
@@ -189,6 +255,12 @@
         <button class="debug-button" id="debug-spawn-boss">Spawn Boss</button>
         <button class="debug-button" id="debug-apply">Apply Changes</button>
         <button class="debug-button" id="debug-resume">Resume Game</button>
+    </div>
+    <div id="gameover-modal">
+        <h2>Game Over!</h2>
+        <p>You reached round: <span id="final-round"></span></p>
+        <p>Final score: <span id="final-score"></span></p>
+        <button id="restart-button">Play Again</button>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
