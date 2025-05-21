@@ -2,3 +2,23 @@ body {
   overflow: hidden;
   margin: 0px;
 }
+
+.enemy-health-container {
+  width: 40px;
+  height: 5px;
+  position: absolute;
+  transform: translate(-50%, 0);
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.enemy-health-bar {
+  width: 100%;
+  height: 100%;
+  background-color: #00ff00;
+  border-radius: 2px;
+  transition: all 0.2s ease-out;
+}

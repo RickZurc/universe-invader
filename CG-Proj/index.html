@@ -198,6 +198,50 @@
         font-size: 18px;
         z-index: 100;
     }
+
+    #knockback-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        z-index: 100;
+      }
+
+      #knockback-timer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: conic-gradient(#00aaff 0%, transparent 0%);
+        border: 2px solid #00aaff;
+        box-shadow: 0 0 10px #00aaff;
+      }
+
+      #knockback-key {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #00aaff;
+        font-family: Arial, sans-serif;
+        font-size: 20px;
+        text-shadow: 0 0 5px #00aaff;
+      }
+
+      #knockback-ready {
+        position: absolute;
+        bottom: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #00aaff;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        text-shadow: 0 0 5px #00aaff;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
     </style>
   </head>
 
@@ -215,16 +259,16 @@
       <h2>Upgrade Store</h2>
       <p id="available-score"></p>
       <button class="upgrade-button" id="health-upgrade">
-        Upgrade Max Health (Cost: 500)
+        Upgrade Max Health (Cost: <span class="cost-value">-</span>)
       </button>
       <button class="upgrade-button" id="damage-upgrade">
-        Upgrade Bullet Damage (Cost: 300)
+        Upgrade Bullet Damage (Cost: <span class="cost-value">-</span>)
       </button>
       <button class="upgrade-button" id="speed-upgrade">
-        Upgrade Movement Speed (Cost: 200)
+        Upgrade Movement Speed (Cost: <span class="cost-value">-</span>)
       </button>
       <button class="upgrade-button" id="firerate-upgrade">
-        Increase Fire Rate (Cost: 400)
+        Increase Fire Rate (Cost: <span class="cost-value">-</span>)
       </button>
       <button class="upgrade-button" id="save-game">
         Save Game Progress
@@ -261,6 +305,11 @@
         <p>You reached round: <span id="final-round"></span></p>
         <p>Final score: <span id="final-score"></span></p>
         <button id="restart-button">Play Again</button>
+    </div>
+    <div id="knockback-container">
+      <div id="knockback-timer"></div>
+      <div id="knockback-key">R</div>
+      <div id="knockback-ready">READY!</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
