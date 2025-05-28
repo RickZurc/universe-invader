@@ -9,8 +9,14 @@ export class InputManager {
     moveDown: boolean = false;
     isShooting: boolean = false;
     isKnockback: boolean = false;
+    isSecondaryFire: boolean = false;
+    private _isEMPDeploy: boolean = false;
     mouse: THREE.Vector2;
     mouseWorldPosition: THREE.Vector3;
+
+    get isEMPDeploy(): boolean {
+        return this._isEMPDeploy;
+    }
 
     private constructor() {
         this.mouse = new THREE.Vector2();
@@ -34,22 +40,24 @@ export class InputManager {
     private handleKeyDown(event: KeyboardEvent) {
         switch (event.key.toLowerCase()) {
             case 'a': this.moveLeft = true; break;
-            case 'd': this.moveRight = true; break;
-            case 'w': this.moveUp = true; break;
+            case 'd': this.moveRight = true; break;            case 'w': this.moveUp = true; break;
             case 's': this.moveDown = true; break;
             case ' ': this.isShooting = true; break;
             case 'r': this.isKnockback = true; break;
+            case 'q': this.isSecondaryFire = true; break;
+            case 'e': this._isEMPDeploy = true; break;
         }
     }
 
     private handleKeyUp(event: KeyboardEvent) {
         switch (event.key.toLowerCase()) {
             case 'a': this.moveLeft = false; break;
-            case 'd': this.moveRight = false; break;
-            case 'w': this.moveUp = false; break;
+            case 'd': this.moveRight = false; break;            case 'w': this.moveUp = false; break;
             case 's': this.moveDown = false; break;
             case ' ': this.isShooting = false; break;
             case 'r': this.isKnockback = false; break;
+            case 'q': this.isSecondaryFire = false; break;
+            case 'e': this._isEMPDeploy = false; break;
         }
     }
 

@@ -1,0 +1,71 @@
+.ability-container {
+    position: fixed;
+    bottom: 20px;
+    width: 50px;
+    height: 50px;
+    z-index: 100;
+}
+
+.ability-timer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 0 10px;
+}
+
+.ability-key {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.ability-ready {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    opacity: 0;
+    text-shadow: 0 0 5px white;
+}
+
+#knockback-container {
+    right: 20px;
+}
+
+#emp-container {
+    right: 90px;
+}
+
+#knockback-timer {
+    border: 2px solid #00aaff;
+    background: conic-gradient(#00aaff 0%, transparent 0%);
+}
+
+#emp-timer {
+    border: 2px solid #00ffff;
+    background: conic-gradient(#00ffff 0%, transparent 0%);
+}
+
+#knockback-key {
+    color: #00aaff;
+}
+
+#emp-key {
+    color: #00ffff;
+}
+
+#knockback-ready {
+    color: #00aaff;
+}
+
+#emp-ready {
+    color: #00ffff;
+}

@@ -1,0 +1,39 @@
+#store-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border: 2px solid #666;
+  border-radius: 10px;
+  color: white;
+  z-index: 1000;
+  min-width: 300px;
+}
+
+.upgrade-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #444;
+  border: 1px solid #666;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.upgrade-button:hover {
+  background-color: #555;
+}
+
+.upgrade-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#continue-button {
+  background-color: #007700;
+}

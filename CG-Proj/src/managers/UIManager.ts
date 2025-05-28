@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { GameConfig } from '../config/GameConfig';
 
 export class UIManager {
@@ -12,6 +11,10 @@ export class UIManager {
     private debugModal: HTMLElement;
     private knockbackTimer: HTMLElement;
     private knockbackReady: HTMLElement;
+    private empTimer: HTMLElement;
+    private empReady: HTMLElement;
+    private missileCountElement: HTMLElement;
+    private empCountElement: HTMLElement;
 
     constructor() {
         this.scoreElement = document.getElementById('score')!;
@@ -24,6 +27,37 @@ export class UIManager {
         this.debugModal = document.getElementById('debug-modal')!;
         this.knockbackTimer = document.getElementById('knockback-timer')!;
         this.knockbackReady = document.getElementById('knockback-ready')!;
+        this.empTimer = document.getElementById('emp-timer')!;
+        this.empReady = document.getElementById('emp-ready')!;
+
+        // Create missile count element
+        this.missileCountElement = document.createElement('div');
+        this.missileCountElement.id = 'missile-count';
+        this.missileCountElement.style.cssText = `
+            position: fixed;
+            bottom: 50px;
+            left: 20px;
+            color: #ff00ff;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-shadow: 0 0 5px #ff00ff;
+            z-index: 100;
+        `;
+        document.body.appendChild(this.missileCountElement);
+
+        // Create EMP bomb count element
+        this.empCountElement = document.createElement('div');
+        this.empCountElement.id = 'emp-count';
+        this.empCountElement.style.position = 'fixed';
+        this.empCountElement.style.bottom = '20px';
+        this.empCountElement.style.left = '20px';
+        this.empCountElement.style.color = '#00ffff';
+        this.empCountElement.style.fontFamily = 'Arial, sans-serif';
+        this.empCountElement.style.fontSize = '18px';
+        this.empCountElement.style.textShadow = '0 0 5px #00ffff';
+        document.body.appendChild(this.empCountElement);
+
+        this.updateMissileCount(0);
     }
 
     updateScore(score: number) {
@@ -77,14 +111,14 @@ export class UIManager {
         }
     }
 
-    private updateUpgradeCosts() {
+    updateUpgradeCosts(scaledCosts: { HEALTH: number, DAMAGE: number, SPEED: number, FIRE_RATE: number }) {
         // Get all cost value spans
         const costSpans = document.querySelectorAll('.cost-value');
         const costs = [
-            GameConfig.UPGRADE_COSTS.HEALTH,
-            GameConfig.UPGRADE_COSTS.DAMAGE,
-            GameConfig.UPGRADE_COSTS.SPEED,
-            GameConfig.UPGRADE_COSTS.FIRE_RATE
+            scaledCosts.HEALTH,
+            scaledCosts.DAMAGE,
+            scaledCosts.SPEED,
+            scaledCosts.FIRE_RATE
         ];
         
         costSpans.forEach((span, index) => {
@@ -94,12 +128,12 @@ export class UIManager {
         });
     }
 
-    openStore(score: number) {
+    openStore(score: number, scaledCosts: { HEALTH: number, DAMAGE: number, SPEED: number, FIRE_RATE: number }) {
         const scoreSpan = document.getElementById('available-score');
         if (this.storeModal && scoreSpan) {
             this.storeModal.style.display = 'block';
             scoreSpan.textContent = `Available Score: ${score}`;
-            this.updateUpgradeCosts();
+            this.updateUpgradeCosts(scaledCosts);
         }
     }
 
@@ -168,6 +202,41 @@ export class UIManager {
         } else {
             this.knockbackTimer.style.boxShadow = '0 0 10px #00aaff';
             this.knockbackReady.style.opacity = '0';
+        }
+    }    updateMissileCount(count: number) {
+        if (this.missileCountElement) {
+            this.missileCountElement.textContent = `Homing Missiles: ${count}`;
+            this.missileCountElement.style.opacity = count > 0 ? '1' : '0.5';
+        }
+    }    updateEMPCooldown(remainingCooldown: number, totalCooldown: number) {
+        // Update circular progress
+        if (this.empTimer && this.empReady) {
+            const progress = (totalCooldown - remainingCooldown) / totalCooldown;
+            const percentage = Math.min(100, progress * 100);
+            
+            // Update the circular progress using conic gradient
+            this.empTimer.style.background = 
+                `conic-gradient(transparent ${percentage}%, #00ffff ${percentage}%)`;
+
+            if (remainingCooldown <= 0) {
+                this.empTimer.style.boxShadow = '0 0 15px #00ffff';
+                this.empReady.style.opacity = '1';
+            } else {
+                this.empTimer.style.boxShadow = '0 0 10px #00ffff';
+                this.empReady.style.opacity = '0';
+            }
+        }
+
+        // Update text display
+        if (this.empCountElement) {
+            if (remainingCooldown > 0) {
+                const seconds = (remainingCooldown / 1000).toFixed(1);
+                this.empCountElement.textContent = `EMP: ${seconds}s`;
+                this.empCountElement.style.opacity = '0.5';
+            } else {
+                this.empCountElement.textContent = 'EMP: Ready';
+                this.empCountElement.style.opacity = '1';
+            }
         }
     }
 }

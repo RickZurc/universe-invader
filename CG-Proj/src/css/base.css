@@ -1,0 +1,45 @@
+body {
+  background: #000000;
+  margin: 0;
+  overflow: hidden;
+}
+
+#starfield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: radial-gradient(circle at center, rgba(20, 20, 50, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
+}
+
+#score {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  z-index: 100;
+}
+
+#round {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  z-index: 100;
+}
+
+#enemies-remaining {
+  position: fixed;
+  top: 60px;
+  left: 20px;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  z-index: 100;
+}

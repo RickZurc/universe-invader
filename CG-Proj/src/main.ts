@@ -1,6 +1,5 @@
 import './style.css';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { GameConfig } from './config/GameConfig';
 import { SceneManager } from './managers/SceneManager';
 import { PlayerManager } from './managers/PlayerManager';
@@ -13,6 +12,11 @@ import { GameManager } from './managers/GameManager';
 import { ParticleSystem } from './systems/ParticleSystem';
 import { Enemy } from './models/Enemy';
 import { BossEnemy, SpecialEnemy } from './models/EnemyTypes';
+import { PowerUpType } from './models/PowerUp';
+import { PowerUpManager } from './managers/PowerUpManager';
+import { MissileManager } from './managers/MissileManager';
+import { EMPBombManager } from './managers/EMPBombManager';
+import { DamagePopup } from './utils/DamagePopup';
 
 class Game {
     private sceneManager: SceneManager;
@@ -22,21 +26,30 @@ class Game {
     private inputManager: InputManager;
     private uiManager: UIManager;
     private storeManager: StoreManager;
-    private gameManager: GameManager; private gameOver: boolean = false;
+    private gameManager: GameManager;
+    private gameOver: boolean = false;
     private score: number = 0;
     private currentRound: number = 1;
     private isStorePaused: boolean = false;
     private isDebugMode: boolean = false;
     private lastShotTime: number = 0;
+    private lastMissileTime: number = 0;  // Separate cooldown for missiles
     private currentFireRate: number = GameConfig.INITIAL_FIRE_RATE;
     private lastKnockbackTime: number = 0;
+    private powerUpManager: PowerUpManager;
+    private missileManager: MissileManager;
+    private homingMissiles: number = 0;
+    private empBombManager: EMPBombManager;
+    private lastEMPTime: number = 0;
 
     constructor() {
         // Initialize managers
         this.sceneManager = new SceneManager();
         this.playerManager = new PlayerManager(this.sceneManager.getScene());
         this.enemyManager = new EnemyManager(this.sceneManager.getScene(), this.playerManager.getShip());
-        this.bulletManager = new BulletManager(this.sceneManager.getScene(), this.playerManager.getShip());
+        this.bulletManager = new BulletManager(this.sceneManager.getScene(), this.playerManager.getShip());        this.powerUpManager = new PowerUpManager(this.sceneManager.getScene(), this.playerManager.getShip());
+        this.missileManager = new MissileManager(this.sceneManager.getScene(), this.enemyManager, this.sceneManager);
+        this.empBombManager = new EMPBombManager(this.sceneManager.getScene(), this.sceneManager.getCamera());
         this.inputManager = InputManager.getInstance();
         this.uiManager = new UIManager();
         this.gameManager = GameManager.getInstance();
@@ -44,6 +57,9 @@ class Game {
         this.storeManager = new StoreManager(this.uiManager, (type: string, cost: number) => {
             this.handleUpgrade(type, cost);
         });
+
+        // Initialize damage popups
+        DamagePopup.initialize();
 
         this.setupEventListeners();
         this.initializeGame();
@@ -150,6 +166,8 @@ class Game {
         this.bulletManager.setBulletDamage(state.bulletDamage);
         this.playerManager.setMoveSpeed(state.moveSpeed);
         this.enemyManager.setCurrentRound(this.currentRound);
+        this.storeManager.setRound(this.currentRound);
+        this.storeManager.setScore(this.score);
     }
     private handleUpgrade(type: string, cost: number) {
         // Double check if player has enough score
@@ -185,6 +203,8 @@ class Game {
         const totalEnemies = this.enemyManager.getRemainingEnemies();
         this.uiManager.updateEnemiesCounter(this.enemyManager.getEnemies().length, totalEnemies);
         this.uiManager.updateRound(this.currentRound);
+        this.uiManager.updateMissileCount(this.homingMissiles);
+        //this.uiManager.updateEMPCount(this.empBombs);
     }    private startNewRound() {
         this.currentRound++;
         this.enemyManager.setCurrentRound(this.currentRound);  // Update enemy manager's round counter
@@ -192,7 +212,8 @@ class Game {
         this.uiManager.resetWaveProgress(); // Reset wave progress counter
         this.updateUI();
 
-        // Update store with current score before opening
+        // Update store with current score and round before opening
+        this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
         this.storeManager.openStore();
         this.isStorePaused = true;
@@ -244,6 +265,9 @@ class Game {
         this.score = 0;
         this.currentRound = 1;
         this.currentFireRate = GameConfig.INITIAL_FIRE_RATE;
+        this.homingMissiles = 0;
+        //this.empBombs = 3;
+        this.lastEMPTime = 0;
 
         // Reset player stats to initial values
         this.playerManager.setHealth(GameConfig.INITIAL_HEALTH);
@@ -254,37 +278,62 @@ class Game {
         // Reset game state
         this.playerManager.reset();
         this.enemyManager.clearEnemies();
+        this.powerUpManager.clear();
+        this.missileManager.clear();
+        this.empBombManager.clear();
         this.uiManager.closeGameOver();
+
+        // Reset store state
+        this.storeManager.setRound(this.currentRound);
+        this.storeManager.setScore(this.score);
+
         this.updateUI();
         this.enemyManager.createEnemyWave();
-    } 
-    private handleCollisions() {
+    }    private handleCollisions() {
         const bullets = this.bulletManager.getBullets();
         const enemies = this.enemyManager.getEnemies() as Enemy[];
         const playerPosition = this.playerManager.getShip().position;
+
+        // Check power-up collisions
+        const pickedUpType = this.powerUpManager.checkCollisions();
+        if (pickedUpType !== null) {
+            if (pickedUpType === PowerUpType.HOMING_MISSILE) {
+                this.homingMissiles += 3; // Give 3 missiles per pickup
+                this.updateUI();
+            }
+            // EMP is now cooldown-based, so we don't need to handle its pickup
+        }
 
         // Check enemy collisions with player
         for (let enemy of enemies) {
             const distance = new THREE.Vector3()
                 .copy(enemy.position)
                 .sub(playerPosition)
-                .length(); if (distance < 1.5) {
-                    const damageAmount = enemy instanceof BossEnemy ? GameConfig.ENEMY_BASE_DAMAGE.BOSS :
-                        enemy instanceof SpecialEnemy ? GameConfig.ENEMY_BASE_DAMAGE.SPECIAL :
-                            GameConfig.ENEMY_BASE_DAMAGE.NORMAL;
+                .length();
+            if (distance < 1.5) {
+                const damageAmount = enemy instanceof BossEnemy ? GameConfig.ENEMY_BASE_DAMAGE.BOSS :
+                    enemy instanceof SpecialEnemy ? GameConfig.ENEMY_BASE_DAMAGE.SPECIAL :
+                        GameConfig.ENEMY_BASE_DAMAGE.NORMAL;
 
-                    // Scale damage with round number (10% increase per round up to double damage)
-                    const damageMult = Math.min(2.0, 1 + (this.currentRound - 1) * 0.1);
-                    this.playerManager.takeDamage(Math.floor(damageAmount * damageMult));
-                    this.enemyManager.removeEnemy(enemy);
+                // Scale damage with round number
+                const damageMult = Math.min(2.0, 1 + (this.currentRound - 1) * 0.1);
+                const finalDamage = Math.floor(damageAmount * damageMult);
+                
+                this.playerManager.takeDamage(finalDamage);
+                this.enemyManager.removeEnemy(enemy);
 
-                    // Create explosion effect
-                    ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), 0xff0000); if (this.playerManager.getHealth() <= 0) {
-                        this.gameOver = true;
-                        this.uiManager.showGameOver(this.score, this.currentRound);
-                    }
-                    this.updateUI();
+                // Show damage popup near player
+                DamagePopup.show(finalDamage, playerPosition.clone().add(new THREE.Vector3(0, 1, 0)), this.sceneManager.getCamera());
+
+                // Create explosion effect
+                ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), 0xff0000);
+
+                if (this.playerManager.getHealth() <= 0) {
+                    this.gameOver = true;
+                    this.uiManager.showGameOver(this.score, this.currentRound);
                 }
+                this.updateUI();
+            }
         }
 
         // Check bullet collisions with enemies
@@ -293,33 +342,40 @@ class Game {
                 const bulletToEnemyDist = new THREE.Vector3()
                     .copy(bullet.position)
                     .sub(enemy.position)
-                    .length(); if (bulletToEnemyDist < 1) {
-                        const damage = this.bulletManager.getBulletDamage();
-                        enemy.health = Math.max(0, enemy.health - damage);
-                        enemy.startHitEffect();
-                        enemy.updateHealthBar(this.sceneManager.getCamera());
-                        this.bulletManager.removeBullet(bullet);
+                    .length();
+                if (bulletToEnemyDist < 1) {
+                    const damage = this.bulletManager.getBulletDamage();
+                    const oldHealth = enemy.health;
+                    enemy.health = Math.max(0, enemy.health - damage);
+                    enemy.startHitEffect();
+                    enemy.updateHealthBar(this.sceneManager.getCamera());
+                    this.bulletManager.removeBullet(bullet);
 
-                        if (enemy.health <= 0) {                            let explosionColor = 0xff6600;
-                            // Scale score values with round number
-                            const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
-                            const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
-                            let scoreValue = Math.floor(75 * roundScoreMultiplier); // Base score for normal enemies
+                    // Show damage popup that follows the enemy
+                    DamagePopup.show(damage, enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), 
+                        this.sceneManager.getCamera(), { followTarget: enemy });
 
-                            if (enemy instanceof BossEnemy) {
-                                explosionColor = 0xff0000;
-                                scoreValue = Math.floor(400 * roundScoreMultiplier);
-                            } else if (enemy instanceof SpecialEnemy) {
-                                explosionColor = 0x00ffff;
-                                scoreValue = Math.floor(200 * roundScoreMultiplier);
-                            }
+                    if (enemy.health <= 0) {
+                        let explosionColor = 0xff6600;
+                        // Scale score values with round number
+                        const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
+                        const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
+                        let scoreValue = Math.floor(75 * roundScoreMultiplier); // Base score for normal enemies
 
-                            ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
-                            this.enemyManager.removeEnemy(enemy);
-                            this.score += scoreValue;
-                            this.updateUI();
+                        if (enemy instanceof BossEnemy) {
+                            explosionColor = 0xff0000;
+                            scoreValue = Math.floor(400 * roundScoreMultiplier);
+                        } else if (enemy instanceof SpecialEnemy) {
+                            explosionColor = 0x00ffff;
+                            scoreValue = Math.floor(200 * roundScoreMultiplier);
                         }
+
+                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
+                        this.enemyManager.removeEnemy(enemy);
+                        this.score += scoreValue;
+                        this.updateUI();
                     }
+                }
             }
         }
     }
@@ -330,15 +386,26 @@ class Game {
         // Update input state
         this.inputManager.updateMouseWorldPosition(this.sceneManager.getCamera());
 
-        // Update knockback cooldown UI
+        // Update ability cooldown UIs
         const now = Date.now();
-        const remainingCooldown = Math.max(0, 
+        const knockbackCooldown = Math.max(0, 
             (this.lastKnockbackTime + GameConfig.KNOCKBACK.COOLDOWN) - now
         );
-        this.uiManager.updateKnockbackCooldown(remainingCooldown, GameConfig.KNOCKBACK.COOLDOWN);
+        const empCooldown = Math.max(0,
+            (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - now
+        );
+        
+        this.uiManager.updateKnockbackCooldown(knockbackCooldown, GameConfig.KNOCKBACK.COOLDOWN);
+        this.uiManager.updateEMPCooldown(empCooldown, GameConfig.EMP_BOMB.COOLDOWN);
 
-        // Update game state
+        // Game logic updates
         if (!this.gameOver && !this.isStorePaused && !this.isDebugMode) {
+            // Update power-ups
+            this.powerUpManager.update();
+
+            // Update missiles
+            this.missileManager.updateMissiles(this.enemyManager.getEnemies() as Enemy[]);
+
             // Update player
             this.playerManager.update(
                 this.inputManager.moveLeft,
@@ -346,24 +413,49 @@ class Game {
                 this.inputManager.moveUp,
                 this.inputManager.moveDown,
                 this.inputManager.mouseWorldPosition
-            );
-
-            // Handle shooting
+            );            // Handle regular shooting
             if (this.inputManager.isShooting && Date.now() - this.lastShotTime > this.currentFireRate) {
                 this.bulletManager.shoot(this.inputManager.mouseWorldPosition);
                 this.lastShotTime = Date.now();
             }
 
-            // Handle knockback ability
-            const now = Date.now();
-            if (this.inputManager.isKnockback && now - this.lastKnockbackTime >= GameConfig.KNOCKBACK.COOLDOWN) {
-                this.enemyManager.applyKnockback();
-                this.lastKnockbackTime = now;
+            // Handle missile launching (independent from shooting)
+            if (this.inputManager.isSecondaryFire && this.homingMissiles > 0 && Date.now() - this.lastMissileTime > GameConfig.HOMING_MISSILE.COOLDOWN) {
+                // Launch homing missile
+                const direction = new THREE.Vector3()
+                    .copy(this.inputManager.mouseWorldPosition)
+                    .sub(this.playerManager.getShip().position)
+                    .normalize();
+                  this.missileManager.launchMissile(
+                    this.playerManager.getShip().position.clone(),
+                    direction,
+                    this.currentRound,
+                    (enemy: Enemy, score: number) => {
+                        this.score += score;
+                        this.updateUI();
+                    }
+                );
+                this.homingMissiles--;
+                this.lastMissileTime = Date.now();
+                this.updateUI(); // Update UI immediately after firing missile
             }
 
-            // Update game objects
+            // Handle knockback ability
+            if (this.inputManager.isKnockback && Date.now() - this.lastKnockbackTime >= GameConfig.KNOCKBACK.COOLDOWN) {
+                this.enemyManager.applyKnockback();
+                this.lastKnockbackTime = Date.now();
+            }
+
+            // Handle EMP deployment
+            if (this.inputManager.isEMPDeploy && Date.now() - this.lastEMPTime >= GameConfig.EMP_BOMB.COOLDOWN) {
+                const deployed = this.empBombManager.deployEMP(this.playerManager.getShip().position.clone());
+                if (deployed) {
+                    this.lastEMPTime = Date.now();
+                }
+            }            // Update game objects
             this.bulletManager.updateBullets();
             this.enemyManager.updateEnemies(this.sceneManager.getCamera());
+            this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);
             this.handleCollisions();
 
             // Check round completion

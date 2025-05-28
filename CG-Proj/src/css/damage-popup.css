@@ -1,0 +1,33 @@
+.damage-popup {
+    position: absolute;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        1px 1px 0 #000;
+    pointer-events: none;
+    z-index: 1000;
+    transform-origin: center;
+    animation: fadeUpAndOut 1s ease-out forwards;
+    white-space: nowrap;
+    text-align: center;
+    user-select: none;
+}
+
+@keyframes fadeUpAndOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(-5px) scale(1.2);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(1);
+    }
+}

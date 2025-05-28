@@ -1,248 +1,16 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Universe Invader</title>
-    <style>
-      body {
-        background: #000000;
-        margin: 0;
-        overflow: hidden;
-      }
-
-      #starfield {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -1;
-        background: radial-gradient(circle at center, rgba(20, 20, 50, 0.8) 0%, rgba(0, 0, 0, 1) 100%);
-      }
-
-      #score {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        color: white;
-        font-family: Arial, sans-serif;
-        font-size: 24px;
-        z-index: 100;
-      }
-
-      #round {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        color: white;
-        font-family: Arial, sans-serif;
-        font-size: 24px;
-        z-index: 100;
-      }
-
-      #health-container {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        width: 200px;
-        height: 20px;
-        background-color: #333;
-        border: 2px solid #666;
-        z-index: 100;
-      }
-
-      #health-bar {
-        width: 100%;
-        height: 100%;
-        background-color: #0f0;
-        transition: width 0.3s;
-      }
-
-      #store-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.9);
-        padding: 20px;
-        border: 2px solid #666;
-        border-radius: 10px;
-        color: white;
-        z-index: 1000;
-        min-width: 300px;
-      }
-
-      .upgrade-button {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        background-color: #444;
-        border: 1px solid #666;
-        color: white;
-        cursor: pointer;
-        border-radius: 5px;
-      }
-
-      .upgrade-button:hover {
-        background-color: #555;
-      }
-
-      .upgrade-button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      #continue-button {
-        background-color: #007700;
-      }
-
-      .enemy-health-container {
-        position: fixed;
-        width: 40px;
-        height: 4px;
-        background-color: #333;
-        border: 1px solid #666;
-        pointer-events: none;
-        z-index: 100;
-    }
-
-    .enemy-health-bar {
-        width: 100%;
-        height: 100%;
-        background-color: #f00;
-        transition: width 0.2s;
-    }
-
-    #debug-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.95);
-        padding: 20px;
-        border: 2px solid #00ff00;
-        color: #00ff00;
-        font-family: monospace;
-        z-index: 1000;
-        min-width: 300px;
-    }
-
-    .debug-input {
-        background: #001100;
-        border: 1px solid #00ff00;
-        color: #00ff00;
-        padding: 5px;
-        margin: 5px 0;
-        width: 100%;
-    }
-
-    .debug-button {
-        background: #003300;
-        border: 1px solid #00ff00;
-        color: #00ff00;
-        padding: 5px 10px;
-        margin: 5px;
-        cursor: pointer;
-    }
-
-    .debug-button:hover {
-        background: #004400;
-    }
-
-    #gameover-modal {
-        display: none;
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.95);
-        padding: 30px;
-        border: 2px solid #ff0000;
-        border-radius: 10px;
-        color: white;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        z-index: 1000;
-        min-width: 300px;
-    }
-
-    #gameover-modal h2 {
-        color: #ff0000;
-        margin-top: 0;
-    }
-
-    #restart-button {
-        background-color: #ff0000;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        margin-top: 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-
-    #restart-button:hover {
-        background-color: #cc0000;
-    }
-
-    #enemies-remaining {
-        position: fixed;
-        top: 60px;
-        left: 20px;
-        color: white;
-        font-family: Arial, sans-serif;
-        font-size: 18px;
-        z-index: 100;
-    }
-
-    #knockback-container {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-        z-index: 100;
-      }
-
-      #knockback-timer {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background: conic-gradient(#00aaff 0%, transparent 0%);
-        border: 2px solid #00aaff;
-        box-shadow: 0 0 10px #00aaff;
-      }
-
-      #knockback-key {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #00aaff;
-        font-family: Arial, sans-serif;
-        font-size: 20px;
-        text-shadow: 0 0 5px #00aaff;
-      }
-
-      #knockback-ready {
-        position: absolute;
-        bottom: -25px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #00aaff;
-        font-family: Arial, sans-serif;
-        font-size: 12px;
-        text-shadow: 0 0 5px #00aaff;
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.3s;
-      }
-    </style>
+    <link rel="stylesheet" href="/src/css/base.css">
+    <link rel="stylesheet" href="/src/css/health.css">
+    <link rel="stylesheet" href="/src/css/store.css">
+    <link rel="stylesheet" href="/src/css/debug.css">
+    <link rel="stylesheet" href="/src/css/gameover.css">
+    <link rel="stylesheet" href="/src/css/abilities.css">
+    <link rel="stylesheet" href="/src/css/damage-popup.css">
   </head>
 
   <body>
@@ -250,7 +18,7 @@
     <div id="score">Score: 0</div>
     <div id="round">Round: 1</div>
     <div id="health-container">
-      <div id="health-text" style="color: white;">1000/1000</div>
+      <div id="health-text">1000/1000</div>
       <div id="health-bar"></div>
     </div>
     <div id="enemies-remaining" class="enemies-remaining">
@@ -306,10 +74,15 @@
         <p>Final score: <span id="final-score"></span></p>
         <button id="restart-button">Play Again</button>
     </div>
-    <div id="knockback-container">
-      <div id="knockback-timer"></div>
-      <div id="knockback-key">R</div>
-      <div id="knockback-ready">READY!</div>
+    <div id="knockback-container" class="ability-container">
+      <div id="knockback-timer" class="ability-timer">Knockback</div>
+      <div id="knockback-key" class="ability-key">R</div>
+      <div id="knockback-ready" class="ability-ready">READY!</div>
+    </div>
+    <div id="emp-container" class="ability-container">
+      <div id="emp-timer" class="ability-timer"></div>
+      <div id="emp-key" class="ability-key">E</div>
+      <div id="emp-ready" class="ability-ready">READY!</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

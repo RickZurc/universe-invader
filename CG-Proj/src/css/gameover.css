@@ -1,0 +1,36 @@
+#gameover-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.95);
+  padding: 30px;
+  border: 2px solid #ff0000;
+  border-radius: 10px;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  z-index: 1000;
+  min-width: 300px;
+}
+
+#gameover-modal h2 {
+  color: #ff0000;
+  margin-top: 0;
+}
+
+#restart-button {
+  background-color: #ff0000;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin-top: 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#restart-button:hover {
+  background-color: #cc0000;
+}

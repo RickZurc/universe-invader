@@ -6,10 +6,15 @@ export class Enemy extends THREE.Mesh {
     health: number;
     maxHealth: number;
     isHit: boolean;
-    hitTime: number;    healthContainer!: HTMLDivElement;
+    hitTime: number;
+    healthContainer!: HTMLDivElement;
     healthBar!: HTMLDivElement;
     enemyType: typeof EnemyType[EnemyTypeKey];
     color: string;
+    private isFrozen: boolean = false;
+    private frozenEndTime: number = 0;
+    private normalMaterial: THREE.MeshPhongMaterial;
+    private frozenMaterial: THREE.MeshBasicMaterial;
 
     constructor(geometry: THREE.BoxGeometry, _material: THREE.MeshBasicMaterial, baseHealth: number, type: typeof EnemyType[EnemyTypeKey] = EnemyType.Normal) {
         const enemyMaterial = new THREE.MeshPhongMaterial({
@@ -34,6 +39,13 @@ export class Enemy extends THREE.Mesh {
         this.enemyType = type;
         this.color = "red";
         
+        this.normalMaterial = enemyMaterial;
+        this.frozenMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.8
+        });
+
         this.setupHealthBar();
     }    private setupHealthBar() {
         // Create container
@@ -53,6 +65,12 @@ export class Enemy extends THREE.Mesh {
         this.healthContainer.style.top = '-1000px';
     }    updateHealthBar(camera: THREE.Camera) {
         if (!this.healthContainer || !this.healthBar) return;
+
+        // Ensure camera matrices are up to date
+        if (!camera.matrixWorldInverse || camera.matrixWorldInverse.determinant() === 0) {
+            camera.updateMatrixWorld();
+            camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+        }
 
         // Get the vector from the enemy to the camera
         const vector = new THREE.Vector3();
@@ -75,11 +93,10 @@ export class Enemy extends THREE.Mesh {
             this.healthContainer.style.left = `${x}px`;
             this.healthContainer.style.top = `${y - 20}px`; // 20px above enemy
 
-            // Update health percentage
+            // Update health percentage and color
             const healthPercent = Math.max(0, Math.min(100, (this.health / this.maxHealth) * 100));
             this.healthBar.style.width = `${healthPercent}%`;
 
-            // Update color based on health
             if (healthPercent > 60) {
                 this.healthBar.style.backgroundColor = '#00ff00'; // Green
             } else if (healthPercent > 30) {
@@ -120,5 +137,132 @@ export class Enemy extends THREE.Mesh {
         if (this.healthContainer && this.healthContainer.parentNode) {
             this.healthContainer.parentNode.removeChild(this.healthContainer);
         }
+    }
+
+    freeze() {
+        this.isFrozen = true;
+        this.material = this.frozenMaterial;
+    }
+
+    unfreeze() {
+        this.isFrozen = false;
+        this.material = this.normalMaterial;
+    }
+
+    isFrozenState(): boolean {
+        return this.isFrozen;
+    }    stun(duration: number) {
+        if (!this.isFrozen) {
+            this.isFrozen = true;
+            this.frozenEndTime = Date.now() + duration;
+            (this.material as THREE.Material).dispose();
+            this.material = this.frozenMaterial;
+
+            // Add ice crystal particles around the enemy
+            const crystalGeometry = new THREE.IcosahedronGeometry(0.2);
+            const crystalMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.6,
+                shininess: 90
+            });
+
+            // Add multiple ice crystals in random positions around the enemy
+            for (let i = 0; i < 8; i++) {
+                const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+                const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.5;
+                const radius = 0.8 + Math.random() * 0.4;
+                crystal.position.set(
+                    Math.cos(angle) * radius,
+                    Math.sin(angle) * radius,
+                    0
+                );
+                crystal.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+                this.add(crystal);
+            }
+        }
+    }    updateStunState() {
+        if (this.isFrozen && Date.now() >= this.frozenEndTime) {
+            this.isFrozen = false;
+            (this.material as THREE.Material).dispose();
+            this.material = this.normalMaterial;
+
+            // Remove all ice crystal meshes
+            this.children.slice().forEach(child => {
+                if (child instanceof THREE.Mesh && 
+                    child.geometry instanceof THREE.IcosahedronGeometry) {
+                    this.remove(child);
+                    child.geometry.dispose();
+                    child.material.dispose();
+                }
+            });
+
+            // Create shatter effect
+            const particleCount = 20;
+            const particles: THREE.Points[] = [];
+            
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x00ffff,
+                size: 0.1,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const positions = new Float32Array(particleCount * 3);
+            const velocities: THREE.Vector3[] = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 0.5 + Math.random() * 0.5;
+                positions[i * 3] = Math.cos(angle) * radius;
+                positions[i * 3 + 1] = Math.sin(angle) * radius;
+                positions[i * 3 + 2] = 0;
+
+                velocities.push(new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.1,
+                    (Math.random() - 0.5) * 0.1,
+                    0
+                ));
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            this.add(particleSystem);
+            particles.push(particleSystem);
+
+            // Animate particles
+            let frame = 0;
+            const animate = () => {
+                if (frame++ >= 30) { // Run for 30 frames
+                    particles.forEach(p => {
+                        this.remove(p);
+                        p.geometry.dispose();
+                        p.material.dispose();
+                    });
+                    return;
+                }
+
+                const positions = particleGeometry.attributes.position.array as Float32Array;
+                for (let i = 0; i < particleCount; i++) {
+                    positions[i * 3] += velocities[i].x;
+                    positions[i * 3 + 1] += velocities[i].y;
+                    velocities[i].y -= 0.001; // Add gravity effect
+                }
+                particleGeometry.attributes.position.needsUpdate = true;
+                particleMaterial.opacity -= 0.02;
+
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+    }
+
+    isStunned(): boolean {
+        return this.isFrozen;
     }
 }

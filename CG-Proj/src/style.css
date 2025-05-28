@@ -1,3 +1,7 @@
+
+@import './css/damage-popup.css';
+@import './css/abilities.css';
+
 body {
   overflow: hidden;
   margin: 0px;

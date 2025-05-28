@@ -172,6 +172,50 @@ export class EnemyManager {    private scene: THREE.Scene;
         }
     }
     updateEnemies(camera: THREE.Camera) {
+        const now = Date.now();
+        const { ENEMY_SPEED_INCREASE_PER_ROUND } = GameConfig.DIFFICULTY;
+        const speedMultiplier = 1 + (ENEMY_SPEED_INCREASE_PER_ROUND * (this.currentRound - 1));
+
+        for (const enemy of this.enemies) {
+            if (enemy instanceof Enemy) {
+                // Update enemy stun state
+                enemy.updateStunState();
+
+                // Update health bar position
+                enemy.updateHealthBar(camera);
+
+                // Skip movement if stunned
+                if (enemy.isStunned()) {
+                    continue;
+                }
+
+                // Handle knockback if active
+                if (this.enemiesBeingKnockedBack.has(enemy)) {
+                    const knockbackData = this.enemiesBeingKnockedBack.get(enemy)!;
+                    if (now < knockbackData.endTime) {
+                        enemy.position.add(knockbackData.direction);
+                    } else {
+                        this.enemiesBeingKnockedBack.delete(enemy);
+                    }
+                    continue;
+                }
+
+                // Normal enemy movement
+                const direction = new THREE.Vector3()
+                    .copy(this.playerShip.position)
+                    .sub(enemy.position)
+                    .normalize();
+
+                const baseSpeed = enemy instanceof BossEnemy ? 0.03 : 
+                                enemy instanceof SpecialEnemy ? 0.06 : 0.04;
+                const speed = baseSpeed * speedMultiplier;
+
+                enemy.position.add(direction.multiplyScalar(speed));
+
+                // Update enemy orientation
+                enemy.lookAt(this.playerShip.position);
+            }
+        }
         const currentTime = Date.now();
         if (this.enemiesRemainingToSpawn > 0 && currentTime - this.lastSpawnTime >= this.timeBetweenSpawns) {
             this.spawnSingleEnemy();
@@ -181,38 +225,41 @@ export class EnemyManager {    private scene: THREE.Scene;
         // Update enemy movement and health bars
         this.enemies.forEach(enemy => {
             if (enemy instanceof Enemy) {
-                let moveX = 0;
-                let moveY = 0;
+                // Skip movement for frozen enemies
+                if (!enemy.isFrozenState()) {
+                    let moveX = 0;
+                    let moveY = 0;
 
-                // Check if enemy is being knocked back
-                const knockback = this.enemiesBeingKnockedBack.get(enemy);
-                if (knockback && currentTime < knockback.endTime) {
-                    // Apply knockback movement
-                    moveX += knockback.direction.x;
-                    moveY += knockback.direction.y;
-                } else {
-                    // Normal enemy movement towards player
-                    const directionX = this.playerShip.position.x - enemy.position.x;
-                    const directionY = this.playerShip.position.y - enemy.position.y;
-                    
-                    const length = Math.sqrt(directionX * directionX + directionY * directionY);
-                    const speed = enemy instanceof BossEnemy ? 0.05 : 
-                                enemy instanceof SpecialEnemy ? 0.15 : 0.1;
-                    
-                    if (length > 0) {
-                        const roundSpeedMultiplier = Math.min(2.0, 1 + (this.currentRound - 1) * 0.05);
-                        const adjustedSpeed = speed * roundSpeedMultiplier;
+                    // Check if enemy is being knocked back
+                    const knockback = this.enemiesBeingKnockedBack.get(enemy);
+                    if (knockback && currentTime < knockback.endTime) {
+                        // Apply knockback movement
+                        moveX += knockback.direction.x;
+                        moveY += knockback.direction.y;
+                    } else {
+                        // Normal enemy movement towards player
+                        const directionX = this.playerShip.position.x - enemy.position.x;
+                        const directionY = this.playerShip.position.y - enemy.position.y;
                         
-                        moveX += (directionX / length) * adjustedSpeed;
-                        moveY += (directionY / length) * adjustedSpeed;
+                        const length = Math.sqrt(directionX * directionX + directionY * directionY);
+                        const speed = enemy instanceof BossEnemy ? 0.05 : 
+                                    enemy instanceof SpecialEnemy ? 0.15 : 0.1;
+                        
+                        if (length > 0) {
+                            const roundSpeedMultiplier = Math.min(2.0, 1 + (this.currentRound - 1) * 0.05);
+                            const adjustedSpeed = speed * roundSpeedMultiplier;
+                            
+                            moveX += (directionX / length) * adjustedSpeed;
+                            moveY += (directionY / length) * adjustedSpeed;
+                        }
                     }
+
+                    // Apply final movement
+                    enemy.position.x += moveX;
+                    enemy.position.y += moveY;
                 }
 
-                // Apply final movement
-                enemy.position.x += moveX;
-                enemy.position.y += moveY;
-                
-                // Rotate enemy to face player
+                // Update rotation and effects for all enemies (even frozen ones)
                 enemy.rotation.z = Math.atan2(
                     this.playerShip.position.y - enemy.position.y,
                     this.playerShip.position.x - enemy.position.x
