@@ -46,7 +46,17 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         HEALTH: 600,    // Significant investment for survivability
         DAMAGE: 500,    // Higher cost for offensive power
         SPEED: 450,     // Movement is crucial for survival
-        FIRE_RATE: 650  // Most impactful upgrade has highest cost
+        FIRE_RATE: 650,  // Most impactful upgrade has highest cost
+        NANITE_DRONE: 800 // Expensive but powerful defensive upgrade
+    },
+
+    // Nanite Drone settings
+    NANITE_DRONE: {
+        ORBIT_RADIUS: 2,         // Distance from player
+        ORBIT_SPEED: 0.03,       // How fast drones rotate around player
+        DAMAGE: 200,             // Damage dealt to enemy on collision
+        SIZE: 0.3,              // Size of each drone
+        MAX_DRONES: 5,          // Maximum number of drones player can have
     },
 
     // Knockback ability settings

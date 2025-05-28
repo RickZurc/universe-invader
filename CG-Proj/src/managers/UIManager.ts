@@ -111,14 +111,21 @@ export class UIManager {
         }
     }
 
-    updateUpgradeCosts(scaledCosts: { HEALTH: number, DAMAGE: number, SPEED: number, FIRE_RATE: number }) {
+    updateUpgradeCosts(scaledCosts: { 
+        HEALTH: number, 
+        DAMAGE: number, 
+        SPEED: number, 
+        FIRE_RATE: number,
+        NANITE_DRONE: number
+    }) {
         // Get all cost value spans
         const costSpans = document.querySelectorAll('.cost-value');
         const costs = [
             scaledCosts.HEALTH,
             scaledCosts.DAMAGE,
             scaledCosts.SPEED,
-            scaledCosts.FIRE_RATE
+            scaledCosts.FIRE_RATE,
+            scaledCosts.NANITE_DRONE
         ];
         
         costSpans.forEach((span, index) => {
@@ -128,7 +135,13 @@ export class UIManager {
         });
     }
 
-    openStore(score: number, scaledCosts: { HEALTH: number, DAMAGE: number, SPEED: number, FIRE_RATE: number }) {
+    openStore(score: number, scaledCosts: { 
+        HEALTH: number, 
+        DAMAGE: number, 
+        SPEED: number, 
+        FIRE_RATE: number,
+        NANITE_DRONE: number 
+    }) {
         const scoreSpan = document.getElementById('available-score');
         if (this.storeModal && scoreSpan) {
             this.storeModal.style.display = 'block';

@@ -23,62 +23,80 @@ export class EnemyManager {    private scene: THREE.Scene;
         this.playerShip = playerShip;
         this.currentRound = 1;
     }      createEnemyWave() {
-        const { MAX_ENEMIES_PER_WAVE, SPAWN_SPEED_SCALE_CAP, MAX_SPAWN_REDUCTION, WAVE_SIZE_INCREASE } = GameConfig.DIFFICULTY;
+        const { 
+            MAX_ENEMIES_PER_WAVE, 
+            SPAWN_SPEED_SCALE_CAP, 
+            MAX_SPAWN_REDUCTION, 
+            WAVE_SIZE_INCREASE, 
+            MAX_BOSSES_PER_WAVE 
+        } = GameConfig.DIFFICULTY;
         
         // Calculate base enemies with gradual scaling
         const baseEnemies = GameConfig.BASE_ENEMY_ROWS * GameConfig.BASE_ENEMY_COLS;
-        const extraEnemiesPerRound = (this.currentRound - 1) * WAVE_SIZE_INCREASE; // Add 1 enemy per round after first
-        const totalEnemies = Math.min(baseEnemies + extraEnemiesPerRound, MAX_ENEMIES_PER_WAVE);
+        const extraEnemiesPerRound = (this.currentRound - 1) * WAVE_SIZE_INCREASE;
+        const regularEnemies = Math.min(baseEnemies + extraEnemiesPerRound, MAX_ENEMIES_PER_WAVE);
         
-        // Determine if this round should have a boss
-        const shouldHaveBoss = this.currentRound >= 3 && (this.currentRound % 3 === 0);
-        const bossCount = shouldHaveBoss ? 1 : 0;
+        // Boss wave logic:
+        // - Start spawning bosses from round 3
+        // - One boss every 3 rounds
+        // - Maximum of 2 bosses per wave in later rounds
+        const bossCount = this.currentRound >= 3 ? 
+            Math.min(Math.floor((this.currentRound - 3) / 3) + 1, MAX_BOSSES_PER_WAVE) : 0;
         
-        console.log(`Round ${this.currentRound}: Spawning ${totalEnemies} enemies and ${bossCount} bosses`);
-        
-        this.totalEnemiesForRound = totalEnemies + bossCount;
+        this.totalEnemiesForRound = regularEnemies + bossCount;
         this.enemiesRemainingToSpawn = this.totalEnemiesForRound;
         
-        // Calculate spawn speed with smoother scaling and boss priority
-        const baseSpawnTime = shouldHaveBoss ? 500 : GameConfig.ENEMY_SPAWN_TIME; // Faster initial spawn on boss rounds
-        const spawnSpeedMultiplier = Math.pow(0.95, Math.min(SPAWN_SPEED_SCALE_CAP, this.currentRound - 1)); // Slower spawn speed reduction
-        this.timeBetweenSpawns = Math.max(MAX_SPAWN_REDUCTION, baseSpawnTime * spawnSpeedMultiplier);
+        // Calculate spawn speed scaling
+        const spawnSpeedReduction = Math.min(SPAWN_SPEED_SCALE_CAP, this.currentRound - 1) * 0.1;
+        const spawnTime = GameConfig.ENEMY_SPAWN_TIME * Math.pow(0.9, spawnSpeedReduction);
+        this.timeBetweenSpawns = Math.max(MAX_SPAWN_REDUCTION, spawnTime);
+        
+        console.log(`Round ${this.currentRound}:`);
+        console.log(`- Regular enemies: ${regularEnemies}`);
+        console.log(`- Boss enemies: ${bossCount}`);
+        console.log(`- Spawn interval: ${this.timeBetweenSpawns}ms`);
         
         this.lastSpawnTime = Date.now();
     }    
     spawnSingleEnemy(): Enemy | null {
         if (this.enemiesRemainingToSpawn <= 0) return null;
-        const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
         
-        // Calculate health with round-based scaling and caps
+        // Check if we should spawn a boss
+        const existingBosses = this.enemies.filter(e => e instanceof BossEnemy).length;
+        const bossWaveInterval = this.currentRound >= 3 ? this.currentRound % 3 === 0 : false;
+        const shouldSpawnBoss = bossWaveInterval && 
+            existingBosses < GameConfig.DIFFICULTY.MAX_BOSSES_PER_WAVE;
+
+        // Calculate health with round-based scaling
         const { HEALTH_SCALE_CAP, HEALTH_SCALE_FACTOR } = GameConfig.DIFFICULTY;
         const cappedRound = Math.min(HEALTH_SCALE_CAP, this.currentRound - 1);
-        const roundFactor = Math.pow(HEALTH_SCALE_FACTOR, cappedRound);
-        const baseHealth = GameConfig.ENEMY_BASE_HEALTH * roundFactor;
-        
-        let enemy: NormalEnemy | BossEnemy | SpecialEnemy;
-        
-        // Boss enemy spawning logic
-        const isBossRound = this.currentRound >= 3 && this.currentRound % 3 === 0;
-        const shouldSpawnBoss = isBossRound && !this.enemies.some(e => e instanceof BossEnemy);
-        
+        const healthMultiplier = Math.pow(HEALTH_SCALE_FACTOR, cappedRound);
+        const baseHealth = GameConfig.ENEMY_BASE_HEALTH * healthMultiplier;
+
+        // Create enemy geometry
+        const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
+        let enemy: Enemy;
+
         if (shouldSpawnBoss) {
+            // Boss health scales faster and gets significant boosts every 5 rounds
             const { BOSS_HEALTH_INCREASE_PER_5_ROUNDS } = GameConfig.DIFFICULTY;
-            const roundsMultiplier = 1 + Math.floor(this.currentRound / 5) * BOSS_HEALTH_INCREASE_PER_5_ROUNDS;
-            const bossHealth = baseHealth * 3 * roundsMultiplier;
+            const bossBonus = 1 + Math.floor(this.currentRound / 5) * BOSS_HEALTH_INCREASE_PER_5_ROUNDS;
+            const bossHealth = Math.floor(baseHealth * 3 * bossBonus);
             enemy = new BossEnemy(enemyGeometry, null!, bossHealth);
-            console.log(`Spawning boss with ${bossHealth} health at round ${this.currentRound}`);
+            console.log(`Spawning boss (HP: ${bossHealth}) in round ${this.currentRound}`);
         } else if (Math.random() < this.calculateSpecialEnemyChance()) {
-            enemy = new SpecialEnemy(enemyGeometry, null!, baseHealth * 1.5);
+            // Special enemies have 50% more health than normal enemies
+            enemy = new SpecialEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.5));
         } else {
-            enemy = new NormalEnemy(enemyGeometry, null!, baseHealth);
+            enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
         }
         
-        // Position enemy and add to scene
+        // Position and add enemy
         this.positionEnemy(enemy);
         this.enemies.push(enemy);
         this.scene.add(enemy);
         this.enemiesRemainingToSpawn--;
+
         return enemy;
     }    
     private positionEnemy(enemy: THREE.Mesh) {
@@ -176,102 +194,51 @@ export class EnemyManager {    private scene: THREE.Scene;
         const { ENEMY_SPEED_INCREASE_PER_ROUND } = GameConfig.DIFFICULTY;
         const speedMultiplier = 1 + (ENEMY_SPEED_INCREASE_PER_ROUND * (this.currentRound - 1));
 
-        for (const enemy of this.enemies) {
-            if (enemy instanceof Enemy) {
-                // Update enemy stun state
-                enemy.updateStunState();
-
-                // Update health bar position
-                enemy.updateHealthBar(camera);
-
-                // Skip movement if stunned
-                if (enemy.isStunned()) {
-                    continue;
-                }
-
-                // Handle knockback if active
-                if (this.enemiesBeingKnockedBack.has(enemy)) {
-                    const knockbackData = this.enemiesBeingKnockedBack.get(enemy)!;
-                    if (now < knockbackData.endTime) {
-                        enemy.position.add(knockbackData.direction);
-                    } else {
-                        this.enemiesBeingKnockedBack.delete(enemy);
-                    }
-                    continue;
-                }
-
-                // Normal enemy movement
-                const direction = new THREE.Vector3()
-                    .copy(this.playerShip.position)
-                    .sub(enemy.position)
-                    .normalize();
-
-                const baseSpeed = enemy instanceof BossEnemy ? 0.03 : 
-                                enemy instanceof SpecialEnemy ? 0.06 : 0.04;
-                const speed = baseSpeed * speedMultiplier;
-
-                enemy.position.add(direction.multiplyScalar(speed));
-
-                // Update enemy orientation
-                enemy.lookAt(this.playerShip.position);
-            }
-        }
-        const currentTime = Date.now();
-        if (this.enemiesRemainingToSpawn > 0 && currentTime - this.lastSpawnTime >= this.timeBetweenSpawns) {
+        // Spawn new enemies if needed
+        if (this.enemiesRemainingToSpawn > 0 && now - this.lastSpawnTime >= this.timeBetweenSpawns) {
             this.spawnSingleEnemy();
-            this.lastSpawnTime = currentTime;
+            this.lastSpawnTime = now;
         }
 
-        // Update enemy movement and health bars
-        this.enemies.forEach(enemy => {
-            if (enemy instanceof Enemy) {
-                // Skip movement for frozen enemies
-                if (!enemy.isFrozenState()) {
-                    let moveX = 0;
-                    let moveY = 0;
+        for (const enemy of this.enemies) {
+            if (!(enemy instanceof Enemy)) continue;
 
-                    // Check if enemy is being knocked back
-                    const knockback = this.enemiesBeingKnockedBack.get(enemy);
-                    if (knockback && currentTime < knockback.endTime) {
-                        // Apply knockback movement
-                        moveX += knockback.direction.x;
-                        moveY += knockback.direction.y;
-                    } else {
-                        // Normal enemy movement towards player
-                        const directionX = this.playerShip.position.x - enemy.position.x;
-                        const directionY = this.playerShip.position.y - enemy.position.y;
-                        
-                        const length = Math.sqrt(directionX * directionX + directionY * directionY);
-                        const speed = enemy instanceof BossEnemy ? 0.05 : 
-                                    enemy instanceof SpecialEnemy ? 0.15 : 0.1;
-                        
-                        if (length > 0) {
-                            const roundSpeedMultiplier = Math.min(2.0, 1 + (this.currentRound - 1) * 0.05);
-                            const adjustedSpeed = speed * roundSpeedMultiplier;
-                            
-                            moveX += (directionX / length) * adjustedSpeed;
-                            moveY += (directionY / length) * adjustedSpeed;
-                        }
-                    }
+            // Update enemy stun state and health bar
+            enemy.updateStunState();
+            enemy.updateHealthBar(camera);
+            enemy.updateHitEffect();
 
-                    // Apply final movement
-                    enemy.position.x += moveX;
-                    enemy.position.y += moveY;
-                }
-
-                // Update rotation and effects for all enemies (even frozen ones)
-                enemy.rotation.z = Math.atan2(
-                    this.playerShip.position.y - enemy.position.y,
-                    this.playerShip.position.x - enemy.position.x
-                ) + Math.PI / 2;
-
-                // Update health bar position and value
-                enemy.updateHealthBar(camera);
-
-                // Update hit effect if active
-                enemy.updateHitEffect();
+            // Skip movement if stunned or frozen
+            if (enemy.isStunned() || enemy.isFrozenState()) {
+                continue;
             }
-        });
+
+            // Handle knockback if active
+            if (this.enemiesBeingKnockedBack.has(enemy)) {
+                const knockbackData = this.enemiesBeingKnockedBack.get(enemy)!;
+                if (now < knockbackData.endTime) {
+                    enemy.position.add(knockbackData.direction);
+                } else {
+                    this.enemiesBeingKnockedBack.delete(enemy);
+                }
+                continue;
+            }
+
+            // Normal enemy movement
+            const direction = new THREE.Vector3()
+                .copy(this.playerShip.position)
+                .sub(enemy.position)
+                .normalize();
+
+            const baseSpeed = enemy instanceof BossEnemy ? 0.03 : 
+                            enemy instanceof SpecialEnemy ? 0.06 : 0.04;
+            const speed = baseSpeed * speedMultiplier;
+
+            enemy.position.add(direction.multiplyScalar(speed));
+
+            // Update enemy orientation to face player
+            enemy.lookAt(this.playerShip.position);
+        }
     }
 
     getEnemies() {

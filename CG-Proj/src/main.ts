@@ -16,6 +16,7 @@ import { PowerUpType } from './models/PowerUp';
 import { PowerUpManager } from './managers/PowerUpManager';
 import { MissileManager } from './managers/MissileManager';
 import { EMPBombManager } from './managers/EMPBombManager';
+import { NaniteDroneManager } from './managers/NaniteDroneManager';
 import { DamagePopup } from './utils/DamagePopup';
 
 class Game {
@@ -27,6 +28,10 @@ class Game {
     private uiManager: UIManager;
     private storeManager: StoreManager;
     private gameManager: GameManager;
+    private powerUpManager: PowerUpManager;
+    private missileManager: MissileManager;
+    private empBombManager: EMPBombManager;
+    private naniteDroneManager: NaniteDroneManager;
     private gameOver: boolean = false;
     private score: number = 0;
     private currentRound: number = 1;
@@ -36,10 +41,7 @@ class Game {
     private lastMissileTime: number = 0;  // Separate cooldown for missiles
     private currentFireRate: number = GameConfig.INITIAL_FIRE_RATE;
     private lastKnockbackTime: number = 0;
-    private powerUpManager: PowerUpManager;
-    private missileManager: MissileManager;
     private homingMissiles: number = 0;
-    private empBombManager: EMPBombManager;
     private lastEMPTime: number = 0;
 
     constructor() {
@@ -50,6 +52,7 @@ class Game {
         this.bulletManager = new BulletManager(this.sceneManager.getScene(), this.playerManager.getShip());        this.powerUpManager = new PowerUpManager(this.sceneManager.getScene(), this.playerManager.getShip());
         this.missileManager = new MissileManager(this.sceneManager.getScene(), this.enemyManager, this.sceneManager);
         this.empBombManager = new EMPBombManager(this.sceneManager.getScene(), this.sceneManager.getCamera());
+        this.naniteDroneManager = new NaniteDroneManager(this.sceneManager.getScene());
         this.inputManager = InputManager.getInstance();
         this.uiManager = new UIManager();
         this.gameManager = GameManager.getInstance();
@@ -176,20 +179,25 @@ class Game {
         }
 
         // Apply cost
-        this.score = Math.max(0, this.score - cost);        switch (type) {
+        this.score = Math.max(0, this.score - cost);
+        
+        switch (type) {
             case 'health':
-                const newMaxHealth = this.playerManager.getMaxHealth() + 150; // Reduced health gain
+                const newMaxHealth = this.playerManager.getMaxHealth() + 150;
                 this.playerManager.setMaxHealth(newMaxHealth);
                 this.playerManager.setHealth(newMaxHealth);
                 break;
             case 'damage':
-                this.bulletManager.setBulletDamage(this.bulletManager.getBulletDamage() + 35); // Reduced damage increase
+                this.bulletManager.setBulletDamage(this.bulletManager.getBulletDamage() + 35);
                 break;
             case 'speed':
-                this.playerManager.setMoveSpeed(this.playerManager.getMoveSpeed() + 0.015); // Smaller speed boost
+                this.playerManager.setMoveSpeed(this.playerManager.getMoveSpeed() + 0.015);
                 break;
             case 'firerate':
-                this.currentFireRate = Math.max(120, this.currentFireRate - 35); // Smaller fire rate improvement, higher minimum
+                this.currentFireRate = Math.max(120, this.currentFireRate - 35);
+                break;
+            case 'nanite':
+                this.naniteDroneManager.addDrone();
                 break;
         }
 
@@ -266,7 +274,6 @@ class Game {
         this.currentRound = 1;
         this.currentFireRate = GameConfig.INITIAL_FIRE_RATE;
         this.homingMissiles = 0;
-        //this.empBombs = 3;
         this.lastEMPTime = 0;
 
         // Reset player stats to initial values
@@ -281,6 +288,7 @@ class Game {
         this.powerUpManager.clear();
         this.missileManager.clear();
         this.empBombManager.clear();
+        this.naniteDroneManager.clear();
         this.uiManager.closeGameOver();
 
         // Reset store state
@@ -405,6 +413,16 @@ class Game {
 
             // Update missiles
             this.missileManager.updateMissiles(this.enemyManager.getEnemies() as Enemy[]);
+
+            // Update nanite drones and check for drone kills
+            const droneKillResult = this.naniteDroneManager.updateDrones(
+                this.playerManager.getShip().position, 
+                this.enemyManager.getEnemies() as Enemy[]
+            );
+            if (droneKillResult) {
+                this.score += droneKillResult.score;
+                this.updateUI();
+            }
 
             // Update player
             this.playerManager.update(

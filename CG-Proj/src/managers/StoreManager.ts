@@ -35,7 +35,8 @@ export class StoreManager {
             { id: 'health-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.HEALTH) },
             { id: 'damage-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE) },
             { id: 'speed-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED) },
-            { id: 'firerate-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE) }
+            { id: 'firerate-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE) },
+            { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) }
         ];
 
         const availableScore = document.getElementById('available-score');
@@ -47,7 +48,8 @@ export class StoreManager {
             HEALTH: upgrades[0].cost,
             DAMAGE: upgrades[1].cost,
             SPEED: upgrades[2].cost,
-            FIRE_RATE: upgrades[3].cost
+            FIRE_RATE: upgrades[3].cost,
+            NANITE_DRONE: upgrades[4].cost
         };
 
         upgrades.forEach(({ id, cost }) => {
@@ -93,6 +95,11 @@ export class StoreManager {
                 id: 'firerate-upgrade', 
                 type: 'firerate',
                 getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE)
+            },
+            {
+                id: 'nanite-upgrade',
+                type: 'nanite',
+                getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE)
             }
         ];
 
