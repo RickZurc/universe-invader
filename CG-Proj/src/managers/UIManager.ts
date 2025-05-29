@@ -13,6 +13,8 @@ export class UIManager {
     private knockbackReady: HTMLElement;
     private empTimer: HTMLElement;
     private empReady: HTMLElement;
+    private shieldTimer: HTMLElement;
+    private shieldReady: HTMLElement;
     private missileCountElement: HTMLElement;
     private empCountElement: HTMLElement;
 
@@ -29,6 +31,8 @@ export class UIManager {
         this.knockbackReady = document.getElementById('knockback-ready')!;
         this.empTimer = document.getElementById('emp-timer')!;
         this.empReady = document.getElementById('emp-ready')!;
+        this.shieldTimer = document.getElementById('shield-timer')!;
+        this.shieldReady = document.getElementById('shield-ready')!;
 
         // Create missile count element
         this.missileCountElement = document.createElement('div');
@@ -249,6 +253,22 @@ export class UIManager {
             } else {
                 this.empCountElement.textContent = 'EMP: Ready';
                 this.empCountElement.style.opacity = '1';
+            }
+        }
+    }    updateShieldOverdriveCooldown(remainingCooldown: number, totalCooldown: number) {
+        if (this.shieldTimer && this.shieldReady) {
+            const cooldownPercentage = (remainingCooldown / totalCooldown) * 100;
+            
+            // Update the circular progress using conic gradient
+            this.shieldTimer.style.background = 
+                `conic-gradient(transparent ${cooldownPercentage}%, #4444ff ${cooldownPercentage}%)`;
+
+            if (remainingCooldown <= 0) {
+                this.shieldTimer.style.boxShadow = '0 0 15px #4444ff';
+                this.shieldReady.style.opacity = '1';
+            } else {
+                this.shieldTimer.style.boxShadow = '0 0 10px #4444ff';
+                this.shieldReady.style.opacity = '0';
             }
         }
     }

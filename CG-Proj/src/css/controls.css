@@ -1,0 +1,74 @@
+#controls-panel {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #444;
+    color: white;
+    font-family: Arial, sans-serif;
+    min-width: 200px;
+    z-index: 100;
+}
+
+#controls-panel h3 {
+    margin: 0 0 15px 0;
+    color: #fff;
+    text-align: center;
+    font-size: 1.2em;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+}
+
+#controls-panel h4 {
+    margin: 10px 0 5px 0;
+    color: #88ccff;
+    font-size: 1em;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-item {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+    font-size: 0.9em;
+}
+
+.key {
+    background-color: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin-right: 10px;
+    min-width: 20px;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.9em;
+    color: #fff;
+}
+
+.action {
+    color: #ccc;
+}
+
+/* Make the panel semi-transparent when game is paused */
+.paused #controls-panel {
+    opacity: 0.5;
+}
+
+/* Responsive design */
+@media (max-height: 600px) {
+    #controls-panel {
+        font-size: 0.9em;
+        padding: 15px;
+    }
+    
+    .control-item {
+        margin: 3px 0;
+    }
+}

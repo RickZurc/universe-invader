@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/src/css/gameover.css">
     <link rel="stylesheet" href="/src/css/abilities.css">
     <link rel="stylesheet" href="/src/css/damage-popup.css">
+    <link rel="stylesheet" href="/src/css/controls.css">
   </head>
 
   <body>
@@ -23,23 +24,81 @@
     </div>
     <div id="enemies-remaining" class="enemies-remaining">
     </div>
+    <div id="controls-panel">
+      <h3>Game Controls</h3>
+      <div class="control-group">
+        <h4>Movement</h4>
+        <div class="control-item">
+          <span class="key">W</span>
+          <span class="action">Move Up</span>
+        </div>
+        <div class="control-item">
+          <span class="key">S</span>
+          <span class="action">Move Down</span>
+        </div>
+        <div class="control-item">
+          <span class="key">A</span>
+          <span class="action">Move Left</span>
+        </div>
+        <div class="control-item">
+          <span class="key">D</span>
+          <span class="action">Move Right</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <h4>Combat</h4>
+        <div class="control-item">
+          <span class="key">SPACE</span>
+          <span class="action">Fire Weapon</span>
+        </div>
+        <div class="control-item">
+          <span class="key">R</span>
+          <span class="action">Secondary Fire</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <h4>Abilities</h4>
+        <div class="control-item">
+          <span class="key">Q</span>
+          <span class="action">Knockback</span>
+        </div>
+        <div class="control-item">
+          <span class="key">E</span>
+          <span class="action">EMP Blast</span>
+        </div>
+        <div class="control-item">
+          <span class="key">F</span>
+          <span class="action">Shield Overdrive</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <h4>Other</h4>
+        <div class="control-item">
+          <span class="key">J</span>
+          <span class="action">Debug Menu</span>
+        </div>
+      </div>
+    </div>
     <div id="store-modal">
       <h2>Upgrade Store</h2>
       <p id="available-score"></p>
       <button class="upgrade-button" id="health-upgrade">
-        Upgrade Max Health (Cost: <span class="cost-value">-</span>)
+        Upgrade Max Health (Cost: <span class="upgrade-cost">-</span>)
       </button>
       <button class="upgrade-button" id="damage-upgrade">
-        Upgrade Bullet Damage (Cost: <span class="cost-value">-</span>)
+        Upgrade Bullet Damage (Cost: <span class="upgrade-cost">-</span>)
       </button>
       <button class="upgrade-button" id="speed-upgrade">
-        Upgrade Movement Speed (Cost: <span class="cost-value">-</span>)
+        Upgrade Movement Speed (Cost: <span class="upgrade-cost">-</span>)
       </button>
       <button class="upgrade-button" id="firerate-upgrade">
-        Increase Fire Rate (Cost: <span class="cost-value">-</span>)
+        Increase Fire Rate (Cost: <span class="upgrade-cost">-</span>)
       </button>
       <button class="upgrade-button" id="nanite-upgrade">
-        Add Nanite Drone (Cost: <span class="cost-value">-</span>)
+        Add Nanite Drone (Cost: <span class="upgrade-cost">-</span>)
+      </button>
+      <button class="upgrade-button" id="shield-upgrade">
+        Unlock Shield Overdrive - Temporary Invincibility (Cost: <span class="upgrade-cost">-</span>)
       </button>
       <button class="upgrade-button" id="save-game">
         Save Game Progress
@@ -77,15 +136,25 @@
         <p>Final score: <span id="final-score"></span></p>
         <button id="restart-button">Play Again</button>
     </div>
-    <div id="knockback-container" class="ability-container">
-      <div id="knockback-timer" class="ability-timer">Knockback</div>
-      <div id="knockback-key" class="ability-key">R</div>
-      <div id="knockback-ready" class="ability-ready">READY!</div>
-    </div>
-    <div id="emp-container" class="ability-container">
-      <div id="emp-timer" class="ability-timer"></div>
-      <div id="emp-key" class="ability-key">E</div>
-      <div id="emp-ready" class="ability-ready">READY!</div>
+    <div id="abilities-group">
+      <div id="knockback-container" class="ability-container">
+        <div id="knockback-timer" class="ability-timer"></div>
+        <div id="knockback-text" class="ability-text">Knockback</div>
+        <div id="knockback-key" class="ability-key">Q</div>
+        <div id="knockback-ready" class="ability-ready">READY!</div>
+      </div>
+      <div id="emp-container" class="ability-container">
+        <div id="emp-timer" class="ability-timer"></div>
+        <div id="shield-text" class="ability-text">EMP Bomb</div>
+        <div id="emp-key" class="ability-key">E</div>
+        <div id="emp-ready" class="ability-ready">READY!</div>
+      </div>
+      <div id="shield-container" class="ability-container">
+        <div id="shield-timer" class="ability-timer"></div>
+        <div id="shield-text" class="ability-text">Shield Overdrive</div>
+        <div id="shield-key" class="ability-key">F</div>
+        <div id="shield-ready" class="ability-ready">READY!</div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

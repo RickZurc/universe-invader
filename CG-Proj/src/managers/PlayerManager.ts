@@ -10,6 +10,8 @@ export class PlayerManager {
     private maxHealth: number;
     private moveSpeed: number;
     private thrusterParticles: THREE.Points;
+    private shieldMesh: THREE.Mesh | null = null;
+    private shieldPulseStartTime: number = 0;
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
@@ -21,6 +23,17 @@ export class PlayerManager {
         this.playerShip = new THREE.Group();
         this.createTemporaryShip();
         this.loadPlayerModel();
+        
+        // Create shield mesh
+        const shieldGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        const shieldMaterial = new THREE.MeshBasicMaterial({
+            color: GameConfig.SHIELD_OVERDRIVE.COLOR,
+            transparent: true,
+            opacity: GameConfig.SHIELD_OVERDRIVE.OPACITY
+        });
+        this.shieldMesh = new THREE.Mesh(shieldGeometry, shieldMaterial);
+        this.shieldMesh.visible = false;
+        this.playerShip.add(this.shieldMesh);
         
         // Create player light
         const playerLight = new THREE.PointLight(0x00ff00, 2, 15);
@@ -73,6 +86,35 @@ export class PlayerManager {
                 console.error('An error occurred loading the model:', error);
             }
         );
+    }
+
+    activateShieldOverdrive() {
+        if (this.shieldMesh) {
+            this.shieldMesh.visible = true;
+            this.shieldPulseStartTime = Date.now();
+            this.updateShieldPulse();
+        }
+    }
+
+    deactivateShieldOverdrive() {
+        if (this.shieldMesh) {
+            this.shieldMesh.visible = false;
+        }
+    }
+
+    private updateShieldPulse() {
+        if (!this.shieldMesh || !this.shieldMesh.visible) return;
+
+        const now = Date.now();
+        const elapsed = now - this.shieldPulseStartTime;
+        const pulsePhase = (elapsed % GameConfig.SHIELD_OVERDRIVE.PULSE_RATE) / GameConfig.SHIELD_OVERDRIVE.PULSE_RATE;
+        const opacity = GameConfig.SHIELD_OVERDRIVE.OPACITY * (0.7 + 0.3 * Math.sin(pulsePhase * Math.PI * 2));
+
+        if (this.shieldMesh.material instanceof THREE.MeshBasicMaterial) {
+            this.shieldMesh.material.opacity = opacity;
+        }
+
+        requestAnimationFrame(() => this.updateShieldPulse());
     }
 
     update(

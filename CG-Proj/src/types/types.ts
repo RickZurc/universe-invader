@@ -13,4 +13,6 @@ export interface GameState {
     currentRound: number;
     bulletDamage: number;
     moveSpeed: number;
+    hasShieldOverdrive: boolean;
+    lastShieldTime: number;
 }

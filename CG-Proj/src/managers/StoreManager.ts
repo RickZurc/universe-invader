@@ -36,31 +36,29 @@ export class StoreManager {
             { id: 'damage-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE) },
             { id: 'speed-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED) },
             { id: 'firerate-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE) },
-            { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) }
+            { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) },
+            { id: 'shield-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE) }
         ];
 
         const availableScore = document.getElementById('available-score');
         if (availableScore) {
             availableScore.textContent = `Available Score: ${this.score}`;
-        }
-
-        const scaledCosts = {
-            HEALTH: upgrades[0].cost,
-            DAMAGE: upgrades[1].cost,
-            SPEED: upgrades[2].cost,
-            FIRE_RATE: upgrades[3].cost,
-            NANITE_DRONE: upgrades[4].cost
-        };
-
-        upgrades.forEach(({ id, cost }) => {
+        }        upgrades.forEach(({ id, cost }) => {
             const button = document.getElementById(id) as HTMLButtonElement;
             if (button) {
-                button.disabled = this.score < cost;
+                const canAfford = this.score >= cost;
+                button.disabled = !canAfford;
+                if (canAfford) {
+                    button.classList.remove('disabled');
+                } else {
+                    button.classList.add('disabled');
+                }
+                const costSpan = button.querySelector('.upgrade-cost');
+                if (costSpan) {
+                    costSpan.textContent = cost.toString();
+                }
             }
         });
-
-        // Update cost displays in UI
-        this.uiManager.updateUpgradeCosts(scaledCosts);
     }
 
     openStore() {
@@ -68,7 +66,9 @@ export class StoreManager {
             HEALTH: this.getScaledCost(GameConfig.UPGRADE_COSTS.HEALTH),
             DAMAGE: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE),
             SPEED: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED),
-            FIRE_RATE: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE)
+            FIRE_RATE: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE),
+            NANITE_DRONE: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE),
+            SHIELD_OVERDRIVE: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE)
         };
         this.uiManager.openStore(this.score, scaledCosts);
         this.updateUpgradeButtons();
@@ -100,15 +100,18 @@ export class StoreManager {
                 id: 'nanite-upgrade',
                 type: 'nanite',
                 getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE)
+            },
+            {
+                id: 'shield-upgrade',
+                type: 'shield',
+                getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE)
             }
-        ];
-
-        upgrades.forEach(({ id, type, getCost }) => {
-            const button = document.getElementById(id);
+        ];        upgrades.forEach(({ id, type, getCost }) => {
+            const button = document.getElementById(id) as HTMLButtonElement;
             if (button) {
                 button.addEventListener('click', () => {
                     const currentCost = getCost();
-                    if (this.score >= currentCost) {
+                    if (this.score >= currentCost && !button.disabled) {
                         this.onUpgrade(type, currentCost);
                     }
                 });

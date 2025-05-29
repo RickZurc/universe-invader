@@ -41,13 +41,24 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         SCORE_SCALE_FACTOR: 1.25,    // 25% score increase per round
         WAVE_SIZE_INCREASE: 2,       // Add 2 enemies per round
         UPGRADE_COST_SCALE_FACTOR: 1.15  // 15% upgrade cost increase per round
-    },    // Store costs - base costs before round scaling
+    },    // Shield Overdrive ability settings
+    SHIELD_OVERDRIVE: {
+        DURATION: 3000,           // Duration of invincibility in milliseconds
+        COOLDOWN: 15000,         // Long cooldown to balance power
+        PULSE_RATE: 200,         // How often the shield effect pulses
+        COLOR: 0x4444ff,        // Blue shield color
+        OPACITY: 0.3,           // Shield transparency
+        KEY: 'F',               // Key to activate ability
+    },
+
+    // Store costs - base costs before round scaling
     UPGRADE_COSTS: {
         HEALTH: 600,    // Significant investment for survivability
         DAMAGE: 500,    // Higher cost for offensive power
         SPEED: 450,     // Movement is crucial for survival
         FIRE_RATE: 650,  // Most impactful upgrade has highest cost
-        NANITE_DRONE: 800 // Expensive but powerful defensive upgrade
+        NANITE_DRONE: 800, // Expensive but powerful defensive upgrade
+        SHIELD_OVERDRIVE: 2500 // Very expensive endgame upgrade
     },
 
     // Nanite Drone settings

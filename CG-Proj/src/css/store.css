@@ -32,8 +32,33 @@
 .upgrade-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: #333;
+  border-color: #444;
+}
+
+.upgrade-button:disabled .upgrade-cost {
+  color: #cc0000;
 }
 
 #continue-button {
   background-color: #007700;
+}
+
+.upgrade-cost {
+  color: #ffcc00;
+  font-weight: bold;
+  margin-left: 5px;
+}
+
+#shield-upgrade {
+  background-color: #2b2b99;
+  border-color: #4444ff;
+}
+
+#shield-upgrade:hover {
+  background-color: #3333aa;
+}
+
+#save-game {
+  background-color: #775500;
 }

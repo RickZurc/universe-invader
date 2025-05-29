@@ -13,6 +13,7 @@ import { ParticleSystem } from './systems/ParticleSystem';
 import { Enemy } from './models/Enemy';
 import { BossEnemy, SpecialEnemy } from './models/EnemyTypes';
 import { PowerUpType } from './models/PowerUp';
+import type { GameState } from './types/types';
 import { PowerUpManager } from './managers/PowerUpManager';
 import { MissileManager } from './managers/MissileManager';
 import { EMPBombManager } from './managers/EMPBombManager';
@@ -43,6 +44,10 @@ class Game {
     private lastKnockbackTime: number = 0;
     private homingMissiles: number = 0;
     private lastEMPTime: number = 0;
+    private hasShieldOverdrive: boolean = false;
+    private lastShieldTime: number = 0;
+    private isShieldActive: boolean = false;
+    private shieldEndTime: number = 0;
 
     constructor() {
         // Initialize managers
@@ -151,6 +156,25 @@ class Game {
                 }
             }
         });
+
+        document.getElementById('save-game')?.addEventListener('click', () => {
+            const gameState: GameState = {
+                score: this.score,
+                playerHealth: this.playerManager.getHealth(),
+                maxHealth: this.playerManager.getMaxHealth(),
+                currentRound: this.currentRound,
+                bulletDamage: this.bulletManager.getBulletDamage(),
+                moveSpeed: this.playerManager.getMoveSpeed(),
+                hasShieldOverdrive: this.hasShieldOverdrive,
+                lastShieldTime: this.lastShieldTime
+            };
+
+            if (this.gameManager.saveGame(gameState)) {
+                this.showDebugFeedback('Game saved successfully!', false);
+            } else {
+                this.showDebugFeedback('Failed to save game', true);
+            }
+        });
     }
     private initializeGame() {
         const savedGame = this.gameManager.loadGame();
@@ -198,6 +222,9 @@ class Game {
                 break;
             case 'nanite':
                 this.naniteDroneManager.addDrone();
+                break;
+            case 'shield':
+                this.hasShieldOverdrive = true;
                 break;
         }
 
@@ -275,12 +302,16 @@ class Game {
         this.currentFireRate = GameConfig.INITIAL_FIRE_RATE;
         this.homingMissiles = 0;
         this.lastEMPTime = 0;
+        this.lastShieldTime = 0;
+        this.hasShieldOverdrive = false;
+        this.isShieldActive = false;
 
         // Reset player stats to initial values
         this.playerManager.setHealth(GameConfig.INITIAL_HEALTH);
         this.playerManager.setMaxHealth(GameConfig.INITIAL_MAX_HEALTH);
         this.playerManager.setMoveSpeed(GameConfig.INITIAL_MOVE_SPEED);
         this.bulletManager.setBulletDamage(GameConfig.INITIAL_BULLET_DAMAGE);
+        this.playerManager.deactivateShieldOverdrive();
 
         // Reset game state
         this.playerManager.reset();
@@ -402,12 +433,36 @@ class Game {
         const empCooldown = Math.max(0,
             (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - now
         );
+        const shieldCooldown = Math.max(0,
+            (this.lastShieldTime + GameConfig.SHIELD_OVERDRIVE.COOLDOWN) - now
+        );
         
         this.uiManager.updateKnockbackCooldown(knockbackCooldown, GameConfig.KNOCKBACK.COOLDOWN);
         this.uiManager.updateEMPCooldown(empCooldown, GameConfig.EMP_BOMB.COOLDOWN);
+        this.uiManager.updateShieldOverdriveCooldown(shieldCooldown, GameConfig.SHIELD_OVERDRIVE.COOLDOWN);
+
+        // Check if Shield Overdrive should end
+        if (this.isShieldActive && now >= this.shieldEndTime) {
+            this.isShieldActive = false;
+            this.playerManager.deactivateShieldOverdrive();
+        }
 
         // Game logic updates
         if (!this.gameOver && !this.isStorePaused && !this.isDebugMode) {
+            // Handle Shield Overdrive activation
+            if (this.hasShieldOverdrive && this.inputManager.isShieldOverdrive && 
+                now - this.lastShieldTime >= GameConfig.SHIELD_OVERDRIVE.COOLDOWN) {
+                this.isShieldActive = true;
+                this.lastShieldTime = now;
+                this.shieldEndTime = now + GameConfig.SHIELD_OVERDRIVE.DURATION;
+                this.playerManager.activateShieldOverdrive();
+            }
+
+            // Handle collisions only if shield is not active
+            if (!this.isShieldActive) {
+                this.handleCollisions();
+            }
+
             // Update power-ups
             this.powerUpManager.update();
 
