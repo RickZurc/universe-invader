@@ -16,4 +16,5 @@ export interface GameState {
     hasShieldOverdrive: boolean;
     lastShieldTime: number;
     piercingLevel: number;
+    superBulletLevel: number;
 }

@@ -29,8 +29,7 @@ export class GameManager {
         try {
             const savedGame = localStorage.getItem('universeInvaderSave');
             if (savedGame) {
-                const parsed = JSON.parse(savedGame);
-                return {
+                const parsed = JSON.parse(savedGame);                return {
                     score: parsed.score,
                     playerHealth: parsed.playerHealth,
                     maxHealth: parsed.maxHealth,
@@ -38,7 +37,9 @@ export class GameManager {
                     bulletDamage: parsed.bulletDamage,
                     moveSpeed: parsed.moveSpeed,
                     hasShieldOverdrive: parsed.hasShieldOverdrive || false,
-                    lastShieldTime: parsed.lastShieldTime || 0
+                    lastShieldTime: parsed.lastShieldTime || 0,
+                    piercingLevel: parsed.piercingLevel || 0,
+                    superBulletLevel: parsed.superBulletLevel || 0
                 };
             }
         } catch (error) {

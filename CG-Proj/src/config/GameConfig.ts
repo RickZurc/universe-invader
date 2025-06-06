@@ -57,16 +57,24 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         FIRE_RATE: 650,  // Most impactful upgrade has highest cost
         NANITE_DRONE: 800, // Expensive but powerful defensive upgrade
         SHIELD_OVERDRIVE: 2500, // Very expensive endgame upgrade
-        PIERCING_BULLETS: 1200 // Expensive piercing upgrade - starts high and scales up
-    },
-
-    // Piercing Bullets settings
+        PIERCING_BULLETS: 1200, // Expensive piercing upgrade - starts high and scales up
+        SUPER_BULLET: 800 // Super Bullet critical hit upgrade
+    },// Piercing Bullets settings
     PIERCING_BULLETS: {
         BASE_COST: 1200,         // Base cost for first level
         COST_MULTIPLIER: 1.8,    // Cost multiplier per level (expensive scaling)
         MAX_LEVEL: 5,            // Maximum piercing level
         PENETRATION_PER_LEVEL: 1, // Each level adds 1 more enemy penetration
         BASE_PENETRATION: 1,     // Level 1 = 2 enemies, Level 2 = 3 enemies, etc.
+    },    // Super Bullet (Critical Hit) settings
+    SUPER_BULLET: {
+        BASE_COST: 800,          // Base cost for first level
+        COST_MULTIPLIER: 1.5,    // Cost multiplier per level
+        MAX_LEVEL: 10,           // Maximum critical hit level
+        CRIT_CHANCE_PER_LEVEL: 5, // Each level adds 5% critical hit chance
+        CRIT_DAMAGE_MULTIPLIER: 2.0, // Critical hits deal 2x damage (double damage)
+        VISUAL_SCALE: 1.5,       // Critical bullets are 50% larger
+        LIGHT_INTENSITY: 1.5,    // Critical bullets glow brighter
     },
 
     // Nanite Drone settings

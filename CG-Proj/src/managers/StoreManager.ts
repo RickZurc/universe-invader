@@ -7,6 +7,7 @@ export class StoreManager {
     private uiManager: UIManager;
     private onUpgrade: (type: string, cost: number) => void;
     private piercingLevel: number = 0; // Track current piercing level
+    private superBulletLevel: number = 0; // Track current super bullet level
 
     constructor(uiManager: UIManager, onUpgrade: (type: string, cost: number) => void) {
         this.score = 0;
@@ -24,15 +25,22 @@ export class StoreManager {
     setRound(round: number) {
         this.currentRound = round;
         this.updateUpgradeButtons();
-    }
-
-    setPiercingLevel(level: number) {
+    }    setPiercingLevel(level: number) {
         this.piercingLevel = level;
         this.updateUpgradeButtons();
     }
 
     getPiercingLevel(): number {
         return this.piercingLevel;
+    }
+
+    setSuperBulletLevel(level: number) {
+        this.superBulletLevel = level;
+        this.updateUpgradeButtons();
+    }
+
+    getSuperBulletLevel(): number {
+        return this.superBulletLevel;
     }
 
     private getScaledCost(baseCost: number): number {
@@ -46,6 +54,7 @@ export class StoreManager {
             { id: 'firerate-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE) },
             { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) },
             { id: 'piercing-upgrade', cost: this.getPiercingUpgradeCost() },
+            { id: 'super-bullet-upgrade', cost: this.getSuperBulletUpgradeCost() },
             { id: 'shield-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE) }
         ];
 
@@ -56,9 +65,10 @@ export class StoreManager {
             const button = document.getElementById(id) as HTMLButtonElement;
             if (button) {
                 const canAfford = this.score >= cost;
-                
-                // Special handling for piercing upgrade - disable if max level reached
-                const isMaxLevel = id === 'piercing-upgrade' && this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL;
+                  // Special handling for piercing upgrade - disable if max level reached
+                const isPiercingMaxLevel = id === 'piercing-upgrade' && this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL;
+                const isSuperBulletMaxLevel = id === 'super-bullet-upgrade' && this.superBulletLevel >= GameConfig.SUPER_BULLET.MAX_LEVEL;
+                const isMaxLevel = isPiercingMaxLevel || isSuperBulletMaxLevel;
                 
                 button.disabled = !canAfford || isMaxLevel;
                 if (canAfford && !isMaxLevel) {
@@ -75,12 +85,20 @@ export class StoreManager {
                         costSpan.textContent = cost.toString();
                     }
                 }
-                
-                // Update button text to show current level for piercing
+                  // Update button text to show current level for piercing
                 if (id === 'piercing-upgrade' && this.piercingLevel > 0) {
                     const buttonText = button.querySelector('.upgrade-name') || button.childNodes[0];
                     if (buttonText) {
                         buttonText.textContent = `Piercing Bullets Lv.${this.piercingLevel}`;
+                    }
+                }
+                
+                // Update button text to show current level for super bullet
+                if (id === 'super-bullet-upgrade' && this.superBulletLevel > 0) {
+                    const buttonText = button.querySelector('.upgrade-name') || button.childNodes[0];
+                    if (buttonText) {
+                        const critChance = this.superBulletLevel * GameConfig.SUPER_BULLET.CRIT_CHANCE_PER_LEVEL;
+                        buttonText.textContent = `Super Bullet Lv.${this.superBulletLevel} (${critChance}% Crit)`;
                     }
                 }
             }
@@ -93,6 +111,7 @@ export class StoreManager {
             FIRE_RATE: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE),
             NANITE_DRONE: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE),
             PIERCING_BULLETS: this.getPiercingUpgradeCost(),
+            SUPER_BULLET: this.getSuperBulletUpgradeCost(),
             SHIELD_OVERDRIVE: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE)
         };
         this.uiManager.openStore(this.score, scaledCosts);
@@ -123,11 +142,15 @@ export class StoreManager {
                 id: 'nanite-upgrade',
                 type: 'nanite',
                 getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE)
-            },
-            {
+            },            {
                 id: 'piercing-upgrade',
                 type: 'piercing',
                 getCost: () => this.getPiercingUpgradeCost()
+            },
+            {
+                id: 'super-bullet-upgrade',
+                type: 'super-bullet',
+                getCost: () => this.getSuperBulletUpgradeCost()
             },
             {
                 id: 'shield-upgrade',
@@ -153,9 +176,7 @@ export class StoreManager {
         document.getElementById('save-game')?.addEventListener('click', () => {
             // This will be handled by GameManager
         });
-    }
-
-    // Calculate cost for piercing upgrade based on current level
+    }    // Calculate cost for piercing upgrade based on current level
     private getPiercingUpgradeCost(): number {
         if (this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL) {
             return Infinity; // Max level reached
@@ -164,6 +185,21 @@ export class StoreManager {
         const nextLevel = this.piercingLevel + 1;
         const baseCost = GameConfig.PIERCING_BULLETS.BASE_COST;
         const multiplier = Math.pow(GameConfig.PIERCING_BULLETS.COST_MULTIPLIER, nextLevel - 1);
+        const levelCost = Math.floor(baseCost * multiplier);
+        
+        // Apply round scaling
+        return this.getScaledCost(levelCost);
+    }
+
+    // Calculate cost for super bullet upgrade based on current level
+    private getSuperBulletUpgradeCost(): number {
+        if (this.superBulletLevel >= GameConfig.SUPER_BULLET.MAX_LEVEL) {
+            return Infinity; // Max level reached
+        }
+        
+        const nextLevel = this.superBulletLevel + 1;
+        const baseCost = GameConfig.SUPER_BULLET.BASE_COST;
+        const multiplier = Math.pow(GameConfig.SUPER_BULLET.COST_MULTIPLIER, nextLevel - 1);
         const levelCost = Math.floor(baseCost * multiplier);
         
         // Apply round scaling

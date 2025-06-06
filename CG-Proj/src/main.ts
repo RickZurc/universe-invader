@@ -1,3 +1,4 @@
+// filepath: c:\Users\tugam\Desktop\CG\Projecto\CG-Proj\src\main.ts
 import './style.css';
 import * as THREE from 'three';
 import { GameConfig } from './config/GameConfig';
@@ -39,7 +40,7 @@ class Game {
     private isStorePaused: boolean = false;
     private isDebugMode: boolean = false;
     private lastShotTime: number = 0;
-    private lastMissileTime: number = 0;  // Separate cooldown for missiles
+    private lastMissileTime: number = 0;
     private currentFireRate: number = GameConfig.INITIAL_FIRE_RATE;
     private lastKnockbackTime: number = 0;
     private homingMissiles: number = 0;
@@ -54,7 +55,8 @@ class Game {
         this.sceneManager = new SceneManager();
         this.playerManager = new PlayerManager(this.sceneManager.getScene());
         this.enemyManager = new EnemyManager(this.sceneManager.getScene(), this.playerManager.getShip());
-        this.bulletManager = new BulletManager(this.sceneManager.getScene(), this.playerManager.getShip());        this.powerUpManager = new PowerUpManager(this.sceneManager.getScene(), this.playerManager.getShip());
+        this.bulletManager = new BulletManager(this.sceneManager.getScene(), this.playerManager.getShip());
+        this.powerUpManager = new PowerUpManager(this.sceneManager.getScene(), this.playerManager.getShip());
         this.missileManager = new MissileManager(this.sceneManager.getScene(), this.enemyManager, this.sceneManager);
         this.empBombManager = new EMPBombManager(this.sceneManager.getScene(), this.sceneManager.getCamera());
         this.naniteDroneManager = new NaniteDroneManager(this.sceneManager.getScene());
@@ -94,7 +96,8 @@ class Game {
         });
 
         document.getElementById('debug-spawn-boss')?.addEventListener('click', () => {
-            if (!this.isDebugMode) return; try {
+            if (!this.isDebugMode) return;
+            try {
                 this.enemyManager.spawnBossEnemy();
                 this.showDebugFeedback('Boss enemy spawned');
                 this.updateUI();
@@ -102,7 +105,9 @@ class Game {
                 this.showDebugFeedback(error.message || 'Failed to spawn boss', true);
                 console.error(error);
             }
-        });        document.getElementById('debug-apply')?.addEventListener('click', () => {
+        });
+
+        document.getElementById('debug-apply')?.addEventListener('click', () => {
             if (!this.isDebugMode) return;
             
             try {
@@ -113,6 +118,7 @@ class Game {
                 const scoreInput = document.getElementById('debug-score') as HTMLInputElement;
                 const missilesInput = document.getElementById('debug-missiles') as HTMLInputElement;
                 const dronesInput = document.getElementById('debug-drones') as HTMLInputElement;
+                const superBulletInput = document.getElementById('debug-super-bullet') as HTMLInputElement;
 
                 let changes: string[] = [];
 
@@ -153,7 +159,9 @@ class Game {
                     const missiles = Math.max(0, Math.min(99, parseInt(missilesInput.value)));
                     this.homingMissiles = missiles;
                     changes.push('Missiles');
-                }                if (dronesInput && !isNaN(parseInt(dronesInput.value))) {
+                }
+
+                if (dronesInput && !isNaN(parseInt(dronesInput.value))) {
                     const targetDrones = Math.max(0, Math.min(5, parseInt(dronesInput.value)));
                     const currentDrones = this.naniteDroneManager.getDroneCount();
                     
@@ -172,6 +180,12 @@ class Game {
                     changes.push('Drones');
                 }
 
+                if (superBulletInput && !isNaN(parseInt(superBulletInput.value))) {
+                    const level = Math.max(0, Math.min(10, parseInt(superBulletInput.value)));
+                    this.bulletManager.setSuperBulletLevel(level);
+                    changes.push('Super Bullet Level');
+                }
+
                 // Update UI to reflect all changes
                 this.updateUI();
                 
@@ -184,6 +198,7 @@ class Game {
                 console.error('Debug apply error:', error);
             }
         });
+
         document.getElementById('debug-resume')?.addEventListener('click', () => this.closeDebugMenu());
 
         document.addEventListener('keydown', (event) => {
@@ -193,32 +208,34 @@ class Game {
                 } else {
                     this.closeDebugMenu();
                 }
-            }
-        });        document.getElementById('save-game')?.addEventListener('click', () => {
-            const gameState: GameState = {
-                score: this.score,
-                playerHealth: this.playerManager.getHealth(),
-                maxHealth: this.playerManager.getMaxHealth(),
-                currentRound: this.currentRound,
-                bulletDamage: this.bulletManager.getBulletDamage(),
-                moveSpeed: this.playerManager.getMoveSpeed(),
-                hasShieldOverdrive: this.hasShieldOverdrive,
-                lastShieldTime: this.lastShieldTime,
-                piercingLevel: this.bulletManager.getPiercingLevel()
-            };
-
-            if (this.gameManager.saveGame(gameState)) {
-                this.showDebugFeedback('Game saved successfully!', false);
-            } else {
-                this.showDebugFeedback('Failed to save game', true);
+            } else if (event.key.toLowerCase() === 's' && event.ctrlKey) {
+                event.preventDefault();
+                const gameState: GameState = {
+                    score: this.score,
+                    playerHealth: this.playerManager.getHealth(),
+                    maxHealth: this.playerManager.getMaxHealth(),
+                    currentRound: this.currentRound,
+                    bulletDamage: this.bulletManager.getBulletDamage(),
+                    moveSpeed: this.playerManager.getMoveSpeed(),
+                    hasShieldOverdrive: this.hasShieldOverdrive,
+                    lastShieldTime: this.lastShieldTime,
+                    piercingLevel: this.bulletManager.getPiercingLevel(),
+                    superBulletLevel: this.bulletManager.getSuperBulletLevel()
+                };
+                
+                if (this.gameManager.saveGame(gameState)) {
+                    this.showDebugFeedback('Game saved successfully!', false);
+                } else {
+                    this.showDebugFeedback('Failed to save game', true);
+                }
             }
         });
 
-        document.getElementById('debug-unlock-shield')?.addEventListener('click', () => {
+        // Toggle shield debug button
+        document.getElementById('debug-toggle-shield')?.addEventListener('click', () => {
             if (!this.isDebugMode) return;
             
             try {
-                // Toggle Shield Overdrive unlock status
                 this.hasShieldOverdrive = !this.hasShieldOverdrive;
                 
                 if (this.hasShieldOverdrive) {
@@ -229,18 +246,18 @@ class Game {
                     this.showDebugFeedback('Shield Overdrive LOCKED', false);
                 }
                 
-                // Update button text to reflect current state
-                const button = document.getElementById('debug-unlock-shield');
+                // Update button text
+                const button = document.getElementById('debug-toggle-shield') as HTMLButtonElement;
                 if (button) {
                     button.textContent = this.hasShieldOverdrive ? 'Lock Shield Overdrive' : 'Unlock Shield Overdrive';
                 }
-                
             } catch (error) {
                 this.showDebugFeedback('Error toggling shield', true);
-                console.error('Debug shield toggle error:', error);
+                console.error('Shield toggle error:', error);
             }
         });
     }
+
     private initializeGame() {
         const savedGame = this.gameManager.loadGame();
         if (savedGame) {
@@ -249,7 +266,9 @@ class Game {
             this.enemyManager.createEnemyWave();
         }
         this.updateUI();
-    }    private loadGameState(state: any) {
+    }
+
+    private loadGameState(state: any) {
         this.score = state.score;
         this.playerManager.setHealth(state.playerHealth);
         this.playerManager.setMaxHealth(state.maxHealth);
@@ -258,29 +277,34 @@ class Game {
         this.playerManager.setMoveSpeed(state.moveSpeed);
         this.hasShieldOverdrive = state.hasShieldOverdrive || false;
         this.lastShieldTime = state.lastShieldTime || 0;
-        
+
         // Load piercing level if available
         if (state.piercingLevel !== undefined) {
             this.bulletManager.setPiercingLevel(state.piercingLevel);
             this.storeManager.setPiercingLevel(state.piercingLevel);
         }
-        
-        // Show Shield Overdrive UI if player has the ability
+
+        // Load super bullet level if available
+        if (state.superBulletLevel !== undefined) {
+            this.bulletManager.setSuperBulletLevel(state.superBulletLevel);
+        }
+
+        // Show shield UI if unlocked
         if (this.hasShieldOverdrive) {
             this.uiManager.showShieldOverdriveUI();
         }
-        
+
+        // Update managers with loaded state
         this.enemyManager.setCurrentRound(this.currentRound);
         this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
     }
+
     private handleUpgrade(type: string, cost: number) {
-        // Double check if player has enough score
         if (this.score < cost) {
             return;
         }
-
-        // Apply cost
+        
         this.score = Math.max(0, this.score - cost);
         
         switch (type) {
@@ -297,12 +321,14 @@ class Game {
                 break;
             case 'firerate':
                 this.currentFireRate = Math.max(120, this.currentFireRate - 35);
-                break;            case 'nanite':
+                break;
+            case 'nanite':
                 this.naniteDroneManager.addDrone();
-                break;            case 'piercing':
+                break;
+            case 'piercing':
                 const currentLevel = this.bulletManager.getPiercingLevel();
                 this.bulletManager.setPiercingLevel(currentLevel + 1);
-                this.storeManager.setPiercingLevel(currentLevel + 1); // Keep store in sync
+                this.storeManager.setPiercingLevel(currentLevel + 1);
                 break;
             case 'shield':
                 this.hasShieldOverdrive = true;
@@ -314,6 +340,7 @@ class Game {
         this.updateUI();
         this.storeManager.setScore(this.score);
     }
+
     private updateUI() {
         this.uiManager.updateScore(this.score);
         this.uiManager.updateHealth(this.playerManager.getHealth(), this.playerManager.getMaxHealth());
@@ -321,12 +348,13 @@ class Game {
         this.uiManager.updateEnemiesCounter(this.enemyManager.getEnemies().length, totalEnemies);
         this.uiManager.updateRound(this.currentRound);
         this.uiManager.updateMissileCount(this.homingMissiles);
-        //this.uiManager.updateEMPCount(this.empBombs);
-    }    private startNewRound() {
+    }
+
+    private startNewRound() {
         this.currentRound++;
-        this.enemyManager.setCurrentRound(this.currentRound);  // Update enemy manager's round counter
+        this.enemyManager.setCurrentRound(this.currentRound);
         this.playerManager.setHealth(this.playerManager.getMaxHealth());
-        this.uiManager.resetWaveProgress(); // Reset wave progress counter
+        this.uiManager.resetWaveProgress();
         this.updateUI();
 
         // Update store with current score and round before opening
@@ -345,7 +373,9 @@ class Game {
             };
             continueButton.addEventListener('click', handler);
         }
-    }    private openDebugMenu() {
+    }
+
+    private openDebugMenu() {
         this.isDebugMode = true;
         this.uiManager.openDebugMenu(
             this.playerManager.getHealth(),
@@ -354,15 +384,20 @@ class Game {
             this.currentFireRate,
             this.score,
             this.homingMissiles,
-            this.naniteDroneManager.getDroneCount()
+            this.naniteDroneManager.getDroneCount(),
+            this.bulletManager.getSuperBulletLevel()
         );
     }
+
     private closeDebugMenu() {
         this.isDebugMode = false;
         this.uiManager.closeDebugMenu();
-    }    private showDebugFeedback(message: string, isError: boolean = false) {
+    }
+
+    private showDebugFeedback(message: string, isError: boolean = false) {
         this.uiManager.showDebugFeedback(message, isError);
     }
+
     private restartGame() {
         this.gameOver = false;
         this.score = 0;
@@ -372,29 +407,37 @@ class Game {
         this.lastEMPTime = 0;
         this.lastShieldTime = 0;
         this.hasShieldOverdrive = false;
-        this.isShieldActive = false;        // Reset player stats to initial values
+        this.isShieldActive = false;
+
+        // Reset player stats to initial values
         this.playerManager.setHealth(GameConfig.INITIAL_HEALTH);
         this.playerManager.setMaxHealth(GameConfig.INITIAL_MAX_HEALTH);
         this.playerManager.setMoveSpeed(GameConfig.INITIAL_MOVE_SPEED);
         this.bulletManager.setBulletDamage(GameConfig.INITIAL_BULLET_DAMAGE);
-        this.bulletManager.setPiercingLevel(0); // Reset piercing level
+        this.bulletManager.setPiercingLevel(0);
+        this.bulletManager.setSuperBulletLevel(0);
         this.playerManager.deactivateShieldOverdrive();
 
         // Reset game state
         this.playerManager.reset();
         this.enemyManager.clearEnemies();
         this.powerUpManager.clear();
-        this.missileManager.clear();        this.empBombManager.clear();
+        this.missileManager.clear();
+        this.empBombManager.clear();
         this.naniteDroneManager.clear();
         this.uiManager.closeGameOver();
-        this.uiManager.hideShieldOverdriveUI(); // Hide Shield UI on restart        // Reset store state
+        this.uiManager.hideShieldOverdriveUI();
+
+        // Reset store state
         this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
-        this.storeManager.setPiercingLevel(0); // Reset piercing level in store
+        this.storeManager.setPiercingLevel(0);
 
         this.updateUI();
         this.enemyManager.createEnemyWave();
-    }    private handleCollisions() {
+    }
+
+    private handleCollisions() {
         const bullets = this.bulletManager.getBullets();
         const enemies = this.enemyManager.getEnemies() as Enemy[];
         const playerPosition = this.playerManager.getShip().position;
@@ -403,11 +446,12 @@ class Game {
         const pickedUpType = this.powerUpManager.checkCollisions();
         if (pickedUpType !== null) {
             if (pickedUpType === PowerUpType.HOMING_MISSILE) {
-                this.homingMissiles += 3; // Give 3 missiles per pickup
+                this.homingMissiles += 3;
                 this.updateUI();
             }
-            // EMP is now cooldown-based, so we don't need to handle its pickup
-        }        // Check enemy collisions with player
+        }
+
+        // Check enemy collisions with player
         for (let enemy of enemies) {
             const distance = new THREE.Vector3()
                 .copy(enemy.position)
@@ -438,10 +482,11 @@ class Game {
                 
                 // Always remove enemy and create explosion, regardless of shield status
                 this.enemyManager.removeEnemy(enemy);
-                // Create explosion effect
                 ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), 0xff0000);
             }
-        }        // Check bullet collisions with enemies
+        }
+
+        // Check bullet collisions with enemies
         for (let bullet of bullets) {
             for (let enemy of enemies) {
                 const bulletToEnemyDist = new THREE.Vector3()
@@ -449,13 +494,12 @@ class Game {
                     .sub(enemy.position)
                     .length();
 
-                if (bulletToEnemyDist < 1) {
-                    // Check if bullet can hit this enemy (for piercing logic)
+                if (bulletToEnemyDist < 1) {                    // Check if bullet can hit this enemy (for piercing logic)
                     if (!this.bulletManager.canBulletHitEnemy(bullet, enemy)) {
-                        continue; // Skip this enemy if already hit by this bullet
+                        continue;
                     }
 
-                    const damage = this.bulletManager.getBulletDamage();
+                    const damage = this.bulletManager.getBulletDamageForBullet(bullet);
                     enemy.health = Math.max(0, enemy.health - damage);
                     enemy.startHitEffect();
                     enemy.updateHealthBar(this.sceneManager.getCamera());
@@ -472,7 +516,7 @@ class Game {
                         // Scale score values with round number
                         const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
                         const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
-                        let scoreValue = Math.floor(75 * roundScoreMultiplier); // Base score for normal enemies
+                        let scoreValue = Math.floor(75 * roundScoreMultiplier);
 
                         if (enemy instanceof BossEnemy) {
                             explosionColor = 0xff0000;
@@ -480,7 +524,9 @@ class Game {
                         } else if (enemy instanceof SpecialEnemy) {
                             explosionColor = 0x00ffff;
                             scoreValue = Math.floor(200 * roundScoreMultiplier);
-                        }                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
+                        }
+
+                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
                         this.enemyManager.removeEnemy(enemy);
                         this.score += scoreValue;
                         this.updateUI();
@@ -489,7 +535,7 @@ class Game {
                     // Remove bullet if piercing logic says it should be removed
                     if (shouldRemoveBullet) {
                         this.bulletManager.removeBullet(bullet);
-                        break; // Break inner loop since bullet is removed
+                        break;
                     }
                 }
             }
@@ -533,7 +579,9 @@ class Game {
                 this.lastShieldTime = now;
                 this.shieldEndTime = now + GameConfig.SHIELD_OVERDRIVE.DURATION;
                 this.playerManager.activateShieldOverdrive();
-            }            // Handle collisions - shield protection is handled inside the method
+            }
+
+            // Handle collisions - shield protection is handled inside the method
             this.handleCollisions();
 
             // Update power-ups
@@ -559,7 +607,9 @@ class Game {
                 this.inputManager.moveUp,
                 this.inputManager.moveDown,
                 this.inputManager.mouseWorldPosition
-            );            // Handle regular shooting
+            );
+
+            // Handle regular shooting
             if (this.inputManager.isShooting && Date.now() - this.lastShotTime > this.currentFireRate) {
                 this.bulletManager.shoot(this.inputManager.mouseWorldPosition);
                 this.lastShotTime = Date.now();
@@ -571,7 +621,9 @@ class Game {
                 const direction = new THREE.Vector3()
                     .copy(this.inputManager.mouseWorldPosition)
                     .sub(this.playerManager.getShip().position)
-                    .normalize();                  this.missileManager.launchMissile(
+                    .normalize();
+
+                this.missileManager.launchMissile(
                     this.playerManager.getShip().position.clone(),
                     direction,
                     this.currentRound,
@@ -582,7 +634,7 @@ class Game {
                 );
                 this.homingMissiles--;
                 this.lastMissileTime = Date.now();
-                this.updateUI(); // Update UI immediately after firing missile
+                this.updateUI();
             }
 
             // Handle knockback ability
@@ -597,7 +649,9 @@ class Game {
                 if (deployed) {
                     this.lastEMPTime = Date.now();
                 }
-            }            // Update game objects
+            }
+
+            // Update game objects
             this.bulletManager.updateBullets();
             this.enemyManager.updateEnemies(this.sceneManager.getCamera());
             this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);

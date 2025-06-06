@@ -147,14 +147,13 @@ export class UIManager {
                 span.textContent = costs[index].toString();
             }
         });
-    }
-
-    openStore(score: number, scaledCosts: { 
+    }    openStore(score: number, scaledCosts: { 
         HEALTH: number, 
         DAMAGE: number, 
         SPEED: number, 
         FIRE_RATE: number,
-        NANITE_DRONE: number 
+        NANITE_DRONE: number,
+        SUPER_BULLET?: number
     }) {
         const scoreSpan = document.getElementById('available-score');
         if (this.storeModal && scoreSpan) {
@@ -195,7 +194,7 @@ export class UIManager {
         } catch (error) {
             console.error('Error closing game over modal:', error);
         }
-    }    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number, score?: number, missiles?: number, drones?: number) {
+    }    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number, score?: number, missiles?: number, drones?: number, superBulletLevel?: number) {
         if (this.debugModal) {
             (document.getElementById('debug-health') as HTMLInputElement).value = playerHealth.toString();
             (document.getElementById('debug-damage') as HTMLInputElement).value = bulletDamage.toString();
@@ -211,6 +210,9 @@ export class UIManager {
             }
             if (drones !== undefined) {
                 (document.getElementById('debug-drones') as HTMLInputElement).value = drones.toString();
+            }
+            if (superBulletLevel !== undefined) {
+                (document.getElementById('debug-super-bullet') as HTMLInputElement).value = superBulletLevel.toString();
             }
             
             this.debugModal.style.display = 'block';
