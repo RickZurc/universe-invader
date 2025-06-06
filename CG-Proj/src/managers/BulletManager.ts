@@ -12,21 +12,21 @@ export class BulletManager {
         this.scene = scene;
         this.playerShip = playerShip;
         this.bulletDamage = GameConfig.INITIAL_BULLET_DAMAGE;
-    }
-
-    shoot(mouseWorldPosition: THREE.Vector3) {
-        const bulletGeometry = new THREE.SphereGeometry(0.2);
+    }    shoot(mouseWorldPosition: THREE.Vector3) {
+        // Create laser-like bullet using cylinder geometry
+        const bulletGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8);
         const bulletMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0xffff00,
-            emissive: 0x444400,
-            shininess: 30
+            color: 0x00ffff,        // Bright cyan color for laser
+            emissive: 0x004444,     // Cyan emission for glow effect
+            shininess: 100,         // High shininess for metallic look
+            transparent: true,
+            opacity: 0.9
         });
         const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
         
-        // Add point light to bullet
-        const bulletLight = new THREE.PointLight(0xffff00, 0.5, 3);
-        bullet.add(bulletLight);
-        
+        // Add point light to bullet with cyan color
+        const bulletLight = new THREE.PointLight(0x00ffff, 0.8, 4);
+        bullet.add(bulletLight);        
         const offset = 1;
         bullet.position.set(
             this.playerShip.position.x + Math.cos(this.playerShip.rotation.z + Math.PI/2) * offset,
@@ -40,7 +40,12 @@ export class BulletManager {
         const length = Math.sqrt(dx * dx + dy * dy);
         const normalizedDx = dx / length;
         const normalizedDy = dy / length;
-          bullet.userData.directionX = normalizedDx;
+        
+        // Orient the cylinder to point in the direction of travel
+        const angle = Math.atan2(dy, dx);
+        bullet.rotation.z = angle - Math.PI/2; // Adjust for cylinder's default orientation
+        
+        bullet.userData.directionX = normalizedDx;
         bullet.userData.directionY = normalizedDy;
         bullet.userData.piercingLeft = this.piercingLevel > 0 ? 
             GameConfig.PIERCING_BULLETS.BASE_PENETRATION + (this.piercingLevel - 1) * GameConfig.PIERCING_BULLETS.PENETRATION_PER_LEVEL : 0;
