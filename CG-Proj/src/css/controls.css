@@ -72,3 +72,8 @@
         margin: 3px 0;
     }
 }
+
+/* Hide Shield Overdrive control by default */
+#shield-control-item {
+    display: none;
+}

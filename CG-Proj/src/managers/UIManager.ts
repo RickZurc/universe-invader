@@ -12,9 +12,10 @@ export class UIManager {
     private knockbackTimer: HTMLElement;
     private knockbackReady: HTMLElement;
     private empTimer: HTMLElement;
-    private empReady: HTMLElement;
-    private shieldTimer: HTMLElement;
+    private empReady: HTMLElement;    private shieldTimer: HTMLElement;
     private shieldReady: HTMLElement;
+    private shieldContainer: HTMLElement;
+    private shieldControlItem: HTMLElement;
     private missileCountElement: HTMLElement;
     private empCountElement: HTMLElement;
 
@@ -29,10 +30,19 @@ export class UIManager {
         this.debugModal = document.getElementById('debug-modal')!;
         this.knockbackTimer = document.getElementById('knockback-timer')!;
         this.knockbackReady = document.getElementById('knockback-ready')!;
-        this.empTimer = document.getElementById('emp-timer')!;
-        this.empReady = document.getElementById('emp-ready')!;
-        this.shieldTimer = document.getElementById('shield-timer')!;
+        this.empTimer = document.getElementById('emp-timer')!;        this.empReady = document.getElementById('emp-ready')!;        this.shieldTimer = document.getElementById('shield-timer')!;
         this.shieldReady = document.getElementById('shield-ready')!;
+        this.shieldContainer = document.getElementById('shield-container')!;
+        
+        // Shield control item might not exist, so we handle it safely
+        const shieldControlElement = document.getElementById('shield-control-item');
+        if (shieldControlElement) {
+            this.shieldControlItem = shieldControlElement;
+        } else {
+            // Create a dummy element to avoid null reference errors
+            this.shieldControlItem = document.createElement('div');
+            this.shieldControlItem.style.display = 'none';
+        };
 
         // Create missile count element
         this.missileCountElement = document.createElement('div');
@@ -185,14 +195,24 @@ export class UIManager {
         } catch (error) {
             console.error('Error closing game over modal:', error);
         }
-    }
-
-    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number) {
+    }    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number, score?: number, missiles?: number, drones?: number) {
         if (this.debugModal) {
             (document.getElementById('debug-health') as HTMLInputElement).value = playerHealth.toString();
             (document.getElementById('debug-damage') as HTMLInputElement).value = bulletDamage.toString();
             (document.getElementById('debug-speed') as HTMLInputElement).value = moveSpeed.toString();
             (document.getElementById('debug-firerate') as HTMLInputElement).value = fireRate.toString();
+            
+            // Update new debug fields if provided
+            if (score !== undefined) {
+                (document.getElementById('debug-score') as HTMLInputElement).value = score.toString();
+            }
+            if (missiles !== undefined) {
+                (document.getElementById('debug-missiles') as HTMLInputElement).value = missiles.toString();
+            }
+            if (drones !== undefined) {
+                (document.getElementById('debug-drones') as HTMLInputElement).value = drones.toString();
+            }
+            
             this.debugModal.style.display = 'block';
         }
     }
@@ -270,6 +290,42 @@ export class UIManager {
                 this.shieldTimer.style.boxShadow = '0 0 10px #4444ff';
                 this.shieldReady.style.opacity = '0';
             }
+        }
+    }    /**
+     * Show Shield Overdrive UI elements when the ability is unlocked
+     */
+    showShieldOverdriveUI() {
+        if (this.shieldContainer) {
+            this.shieldContainer.style.display = 'block';
+        }
+        if (this.shieldControlItem && this.shieldControlItem.id === 'shield-control-item') {
+            this.shieldControlItem.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Hide Shield Overdrive UI elements when the ability is locked or on game reset
+     */
+    hideShieldOverdriveUI() {
+        if (this.shieldContainer) {
+            this.shieldContainer.style.display = 'none';
+        }
+        if (this.shieldControlItem && this.shieldControlItem.id === 'shield-control-item') {
+            this.shieldControlItem.style.display = 'none';
+        }
+    }
+
+    showDebugFeedback(message: string, isError: boolean = false) {
+        const feedbackDiv = document.getElementById('debug-feedback');
+        if (feedbackDiv) {
+            feedbackDiv.textContent = message;
+            feedbackDiv.className = `debug-feedback ${isError ? 'error' : 'success'}`;
+            
+            // Clear the message after 3 seconds
+            setTimeout(() => {
+                feedbackDiv.textContent = '';
+                feedbackDiv.className = 'debug-feedback';
+            }, 3000);
         }
     }
 }

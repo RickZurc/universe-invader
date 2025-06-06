@@ -76,11 +76,11 @@
 }
 
 #knockback-key {
-    color: #00aaff;
+    color: white;
 }
 
 #emp-key {
-    color: #00ffff;
+    color: white;
 }
 
 #knockback-ready {
@@ -89,4 +89,21 @@
 
 #emp-ready {
     color: #00ffff;
+}
+
+/* Shield Overdrive styling and default hidden state */
+#shield-container {
+    display: none; /* Hidden by default until purchased */
+}
+
+#shield-timer {
+    color: #4444ff;
+}
+
+#shield-key {
+    color: white;
+}
+
+#shield-ready {
+    color: #4444ff;
 }

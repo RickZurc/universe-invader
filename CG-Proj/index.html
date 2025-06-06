@@ -66,7 +66,7 @@
           <span class="key">E</span>
           <span class="action">EMP Blast</span>
         </div>
-        <div class="control-item">
+        <div id="shield-control-item" class="control-item">
           <span class="key">F</span>
           <span class="action">Shield Overdrive</span>
         </div>
@@ -97,6 +97,9 @@
       <button class="upgrade-button" id="nanite-upgrade">
         Add Nanite Drone (Cost: <span class="upgrade-cost">-</span>)
       </button>
+      <button class="upgrade-button" id="piercing-upgrade">
+        Upgrade Piercing Bullets (Cost: <span class="upgrade-cost">-</span>)
+      </button>
       <button class="upgrade-button" id="shield-upgrade">
         Unlock Shield Overdrive - Temporary Invincibility (Cost: <span class="upgrade-cost">-</span>)
       </button>
@@ -125,10 +128,24 @@
             <label>Fire Rate:</label>
             <input type="number" id="debug-firerate" class="debug-input">
         </div>
+        <div>
+            <label>Current Score:</label>
+            <input type="number" id="debug-score" class="debug-input" min="0">
+        </div>
+        <div>
+            <label>Homing Missiles:</label>
+            <input type="number" id="debug-missiles" class="debug-input" min="0" max="99">
+        </div>
+        <div>
+            <label>Nanite Drones:</label>
+            <input type="number" id="debug-drones" class="debug-input" min="0" max="5">
+        </div>
         <button class="debug-button" id="debug-spawn-enemy">Spawn Normal Enemy</button>
         <button class="debug-button" id="debug-spawn-boss">Spawn Boss</button>
+        <button class="debug-button" id="debug-unlock-shield">Toggle Shield Overdrive</button>
         <button class="debug-button" id="debug-apply">Apply Changes</button>
         <button class="debug-button" id="debug-resume">Resume Game</button>
+        <div id="debug-feedback" class="debug-feedback"></div>
     </div>
     <div id="gameover-modal">
         <h2>Game Over!</h2>

@@ -15,4 +15,5 @@ export interface GameState {
     moveSpeed: number;
     hasShieldOverdrive: boolean;
     lastShieldTime: number;
+    piercingLevel: number;
 }

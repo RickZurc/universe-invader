@@ -102,47 +102,86 @@ class Game {
                 this.showDebugFeedback(error.message || 'Failed to spawn boss', true);
                 console.error(error);
             }
-        });
-
-        document.getElementById('debug-apply')?.addEventListener('click', () => {
+        });        document.getElementById('debug-apply')?.addEventListener('click', () => {
             if (!this.isDebugMode) return;
-            const healthInput = document.getElementById('debug-health') as HTMLInputElement;
-            const damageInput = document.getElementById('debug-damage') as HTMLInputElement;
-            const speedInput = document.getElementById('debug-speed') as HTMLInputElement;
-            const fireRateInput = document.getElementById('debug-firerate') as HTMLInputElement;
+            
+            try {
+                const healthInput = document.getElementById('debug-health') as HTMLInputElement;
+                const damageInput = document.getElementById('debug-damage') as HTMLInputElement;
+                const speedInput = document.getElementById('debug-speed') as HTMLInputElement;
+                const fireRateInput = document.getElementById('debug-firerate') as HTMLInputElement;
+                const scoreInput = document.getElementById('debug-score') as HTMLInputElement;
+                const missilesInput = document.getElementById('debug-missiles') as HTMLInputElement;
+                const dronesInput = document.getElementById('debug-drones') as HTMLInputElement;
 
-            if (healthInput && damageInput && speedInput && fireRateInput) {
-                const health = Math.max(1, parseInt(healthInput.value));
-                const damage = Math.max(1, parseInt(damageInput.value));
-                const speed = Math.max(0.1, parseFloat(speedInput.value));
-                const fireRate = Math.max(50, parseInt(fireRateInput.value));
+                let changes: string[] = [];
 
-                if (!isNaN(health)) {
+                // Apply basic stats
+                if (healthInput && !isNaN(parseInt(healthInput.value))) {
+                    const health = Math.max(1, parseInt(healthInput.value));
                     this.playerManager.setHealth(health);
                     this.playerManager.setMaxHealth(health);
+                    changes.push('Health');
                 }
-                if (!isNaN(damage)) {
+                
+                if (damageInput && !isNaN(parseInt(damageInput.value))) {
+                    const damage = Math.max(1, parseInt(damageInput.value));
                     this.bulletManager.setBulletDamage(damage);
+                    changes.push('Damage');
                 }
-                if (!isNaN(speed)) {
+                
+                if (speedInput && !isNaN(parseFloat(speedInput.value))) {
+                    const speed = Math.max(0.1, parseFloat(speedInput.value));
                     this.playerManager.setMoveSpeed(speed);
+                    changes.push('Speed');
                 }
-                if (!isNaN(fireRate)) {
+                
+                if (fireRateInput && !isNaN(parseInt(fireRateInput.value))) {
+                    const fireRate = Math.max(50, parseInt(fireRateInput.value));
                     this.currentFireRate = fireRate;
+                    changes.push('Fire Rate');
                 }
 
-                // Update UI to reflect changes
-                this.updateUI();
-                // Show brief feedback
-                const debugModal = document.getElementById('debug-modal');
-                if (debugModal) {
-                    const feedback = document.createElement('div');
-                    feedback.textContent = 'Changes applied successfully!';
-                    feedback.style.color = '#00ff00';
-                    feedback.style.marginTop = '10px';
-                    debugModal.appendChild(feedback);
-                    setTimeout(() => feedback.remove(), 2000);
+                // Apply new debug features
+                if (scoreInput && !isNaN(parseInt(scoreInput.value))) {
+                    const newScore = Math.max(0, parseInt(scoreInput.value));
+                    this.score = newScore;
+                    changes.push('Score');
                 }
+
+                if (missilesInput && !isNaN(parseInt(missilesInput.value))) {
+                    const missiles = Math.max(0, Math.min(99, parseInt(missilesInput.value)));
+                    this.homingMissiles = missiles;
+                    changes.push('Missiles');
+                }                if (dronesInput && !isNaN(parseInt(dronesInput.value))) {
+                    const targetDrones = Math.max(0, Math.min(5, parseInt(dronesInput.value)));
+                    const currentDrones = this.naniteDroneManager.getDroneCount();
+                    
+                    // Add or remove drones to match target count
+                    if (targetDrones > currentDrones) {
+                        for (let i = currentDrones; i < targetDrones; i++) {
+                            this.naniteDroneManager.addDrone();
+                        }
+                    } else if (targetDrones < currentDrones) {
+                        // Remove excess drones by clearing and re-adding the target amount
+                        this.naniteDroneManager.clear();
+                        for (let i = 0; i < targetDrones; i++) {
+                            this.naniteDroneManager.addDrone();
+                        }
+                    }
+                    changes.push('Drones');
+                }
+
+                // Update UI to reflect all changes
+                this.updateUI();
+                
+                // Show success feedback
+                const changesText = changes.length > 0 ? changes.join(', ') : 'No valid changes';
+                this.showDebugFeedback(`Applied: ${changesText}`, false);
+                
+            } catch (error) {
+                this.showDebugFeedback('Error applying changes', true);
+                console.error('Debug apply error:', error);
             }
         });
         document.getElementById('debug-resume')?.addEventListener('click', () => this.closeDebugMenu());
@@ -155,9 +194,7 @@ class Game {
                     this.closeDebugMenu();
                 }
             }
-        });
-
-        document.getElementById('save-game')?.addEventListener('click', () => {
+        });        document.getElementById('save-game')?.addEventListener('click', () => {
             const gameState: GameState = {
                 score: this.score,
                 playerHealth: this.playerManager.getHealth(),
@@ -166,13 +203,41 @@ class Game {
                 bulletDamage: this.bulletManager.getBulletDamage(),
                 moveSpeed: this.playerManager.getMoveSpeed(),
                 hasShieldOverdrive: this.hasShieldOverdrive,
-                lastShieldTime: this.lastShieldTime
+                lastShieldTime: this.lastShieldTime,
+                piercingLevel: this.bulletManager.getPiercingLevel()
             };
 
             if (this.gameManager.saveGame(gameState)) {
                 this.showDebugFeedback('Game saved successfully!', false);
             } else {
                 this.showDebugFeedback('Failed to save game', true);
+            }
+        });
+
+        document.getElementById('debug-unlock-shield')?.addEventListener('click', () => {
+            if (!this.isDebugMode) return;
+            
+            try {
+                // Toggle Shield Overdrive unlock status
+                this.hasShieldOverdrive = !this.hasShieldOverdrive;
+                
+                if (this.hasShieldOverdrive) {
+                    this.uiManager.showShieldOverdriveUI();
+                    this.showDebugFeedback('Shield Overdrive UNLOCKED', false);
+                } else {
+                    this.uiManager.hideShieldOverdriveUI();
+                    this.showDebugFeedback('Shield Overdrive LOCKED', false);
+                }
+                
+                // Update button text to reflect current state
+                const button = document.getElementById('debug-unlock-shield');
+                if (button) {
+                    button.textContent = this.hasShieldOverdrive ? 'Lock Shield Overdrive' : 'Unlock Shield Overdrive';
+                }
+                
+            } catch (error) {
+                this.showDebugFeedback('Error toggling shield', true);
+                console.error('Debug shield toggle error:', error);
             }
         });
     }
@@ -184,14 +249,27 @@ class Game {
             this.enemyManager.createEnemyWave();
         }
         this.updateUI();
-    }
-    private loadGameState(state: any) {
+    }    private loadGameState(state: any) {
         this.score = state.score;
         this.playerManager.setHealth(state.playerHealth);
         this.playerManager.setMaxHealth(state.maxHealth);
         this.currentRound = state.currentRound;
         this.bulletManager.setBulletDamage(state.bulletDamage);
         this.playerManager.setMoveSpeed(state.moveSpeed);
+        this.hasShieldOverdrive = state.hasShieldOverdrive || false;
+        this.lastShieldTime = state.lastShieldTime || 0;
+        
+        // Load piercing level if available
+        if (state.piercingLevel !== undefined) {
+            this.bulletManager.setPiercingLevel(state.piercingLevel);
+            this.storeManager.setPiercingLevel(state.piercingLevel);
+        }
+        
+        // Show Shield Overdrive UI if player has the ability
+        if (this.hasShieldOverdrive) {
+            this.uiManager.showShieldOverdriveUI();
+        }
+        
         this.enemyManager.setCurrentRound(this.currentRound);
         this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
@@ -219,12 +297,16 @@ class Game {
                 break;
             case 'firerate':
                 this.currentFireRate = Math.max(120, this.currentFireRate - 35);
-                break;
-            case 'nanite':
+                break;            case 'nanite':
                 this.naniteDroneManager.addDrone();
+                break;            case 'piercing':
+                const currentLevel = this.bulletManager.getPiercingLevel();
+                this.bulletManager.setPiercingLevel(currentLevel + 1);
+                this.storeManager.setPiercingLevel(currentLevel + 1); // Keep store in sync
                 break;
             case 'shield':
                 this.hasShieldOverdrive = true;
+                this.uiManager.showShieldOverdriveUI();
                 break;
         }
 
@@ -263,38 +345,24 @@ class Game {
             };
             continueButton.addEventListener('click', handler);
         }
-    }
-    private openDebugMenu() {
+    }    private openDebugMenu() {
         this.isDebugMode = true;
         this.uiManager.openDebugMenu(
             this.playerManager.getHealth(),
             this.bulletManager.getBulletDamage(),
             this.playerManager.getMoveSpeed(),
-            this.currentFireRate
+            this.currentFireRate,
+            this.score,
+            this.homingMissiles,
+            this.naniteDroneManager.getDroneCount()
         );
-    } 
+    }
     private closeDebugMenu() {
         this.isDebugMode = false;
         this.uiManager.closeDebugMenu();
+    }    private showDebugFeedback(message: string, isError: boolean = false) {
+        this.uiManager.showDebugFeedback(message, isError);
     }
-    private showDebugFeedback(message: string, isError: boolean = false) {
-        const debugModal = document.getElementById('debug-modal');
-        if (debugModal) {
-            // Remove any existing feedback
-            const existingFeedback = debugModal.querySelector('.debug-feedback');
-            if (existingFeedback) {
-                existingFeedback.remove();
-            }
-
-            const feedback = document.createElement('div');
-            feedback.textContent = message;
-            feedback.style.color = isError ? '#ff0000' : '#00ff00';
-            feedback.style.marginTop = '10px';
-            feedback.className = 'debug-feedback';
-            debugModal.appendChild(feedback);
-            setTimeout(() => feedback.remove(), 2000);
-        }
-    } 
     private restartGame() {
         this.gameOver = false;
         this.score = 0;
@@ -304,27 +372,25 @@ class Game {
         this.lastEMPTime = 0;
         this.lastShieldTime = 0;
         this.hasShieldOverdrive = false;
-        this.isShieldActive = false;
-
-        // Reset player stats to initial values
+        this.isShieldActive = false;        // Reset player stats to initial values
         this.playerManager.setHealth(GameConfig.INITIAL_HEALTH);
         this.playerManager.setMaxHealth(GameConfig.INITIAL_MAX_HEALTH);
         this.playerManager.setMoveSpeed(GameConfig.INITIAL_MOVE_SPEED);
         this.bulletManager.setBulletDamage(GameConfig.INITIAL_BULLET_DAMAGE);
+        this.bulletManager.setPiercingLevel(0); // Reset piercing level
         this.playerManager.deactivateShieldOverdrive();
 
         // Reset game state
         this.playerManager.reset();
         this.enemyManager.clearEnemies();
         this.powerUpManager.clear();
-        this.missileManager.clear();
-        this.empBombManager.clear();
+        this.missileManager.clear();        this.empBombManager.clear();
         this.naniteDroneManager.clear();
         this.uiManager.closeGameOver();
-
-        // Reset store state
+        this.uiManager.hideShieldOverdriveUI(); // Hide Shield UI on restart        // Reset store state
         this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
+        this.storeManager.setPiercingLevel(0); // Reset piercing level in store
 
         this.updateUI();
         this.enemyManager.createEnemyWave();
@@ -341,58 +407,65 @@ class Game {
                 this.updateUI();
             }
             // EMP is now cooldown-based, so we don't need to handle its pickup
-        }
-
-        // Check enemy collisions with player
+        }        // Check enemy collisions with player
         for (let enemy of enemies) {
             const distance = new THREE.Vector3()
                 .copy(enemy.position)
                 .sub(playerPosition)
                 .length();
             if (distance < 1.5) {
-                const damageAmount = enemy instanceof BossEnemy ? GameConfig.ENEMY_BASE_DAMAGE.BOSS :
-                    enemy instanceof SpecialEnemy ? GameConfig.ENEMY_BASE_DAMAGE.SPECIAL :
-                        GameConfig.ENEMY_BASE_DAMAGE.NORMAL;
+                // Only damage player if shield is not active
+                if (!this.isShieldActive) {
+                    const damageAmount = enemy instanceof BossEnemy ? GameConfig.ENEMY_BASE_DAMAGE.BOSS :
+                        enemy instanceof SpecialEnemy ? GameConfig.ENEMY_BASE_DAMAGE.SPECIAL :
+                            GameConfig.ENEMY_BASE_DAMAGE.NORMAL;
 
-                // Scale damage with round number
-                const damageMult = Math.min(2.0, 1 + (this.currentRound - 1) * 0.1);
-                const finalDamage = Math.floor(damageAmount * damageMult);
+                    // Scale damage with round number
+                    const damageMult = Math.min(2.0, 1 + (this.currentRound - 1) * 0.1);
+                    const finalDamage = Math.floor(damageAmount * damageMult);
+                    
+                    this.playerManager.takeDamage(finalDamage);
+
+                    // Show damage popup near player
+                    DamagePopup.show(finalDamage, playerPosition.clone().add(new THREE.Vector3(0, 1, 0)), this.sceneManager.getCamera());
+
+                    if (this.playerManager.getHealth() <= 0) {
+                        this.gameOver = true;
+                        this.uiManager.showGameOver(this.score, this.currentRound);
+                    }
+                    this.updateUI();
+                }
                 
-                this.playerManager.takeDamage(finalDamage);
+                // Always remove enemy and create explosion, regardless of shield status
                 this.enemyManager.removeEnemy(enemy);
-
-                // Show damage popup near player
-                DamagePopup.show(finalDamage, playerPosition.clone().add(new THREE.Vector3(0, 1, 0)), this.sceneManager.getCamera());
-
                 // Create explosion effect
                 ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), 0xff0000);
-
-                if (this.playerManager.getHealth() <= 0) {
-                    this.gameOver = true;
-                    this.uiManager.showGameOver(this.score, this.currentRound);
-                }
-                this.updateUI();
             }
-        }
-
-        // Check bullet collisions with enemies
+        }        // Check bullet collisions with enemies
         for (let bullet of bullets) {
             for (let enemy of enemies) {
                 const bulletToEnemyDist = new THREE.Vector3()
                     .copy(bullet.position)
                     .sub(enemy.position)
                     .length();
+
                 if (bulletToEnemyDist < 1) {
+                    // Check if bullet can hit this enemy (for piercing logic)
+                    if (!this.bulletManager.canBulletHitEnemy(bullet, enemy)) {
+                        continue; // Skip this enemy if already hit by this bullet
+                    }
+
                     const damage = this.bulletManager.getBulletDamage();
-                    const oldHealth = enemy.health;
                     enemy.health = Math.max(0, enemy.health - damage);
                     enemy.startHitEffect();
                     enemy.updateHealthBar(this.sceneManager.getCamera());
-                    this.bulletManager.removeBullet(bullet);
 
                     // Show damage popup that follows the enemy
                     DamagePopup.show(damage, enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), 
                         this.sceneManager.getCamera(), { followTarget: enemy });
+
+                    // Handle bullet piercing logic
+                    const shouldRemoveBullet = this.bulletManager.handleBulletHit(bullet, enemy);
 
                     if (enemy.health <= 0) {
                         let explosionColor = 0xff6600;
@@ -407,12 +480,16 @@ class Game {
                         } else if (enemy instanceof SpecialEnemy) {
                             explosionColor = 0x00ffff;
                             scoreValue = Math.floor(200 * roundScoreMultiplier);
-                        }
-
-                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
+                        }                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
                         this.enemyManager.removeEnemy(enemy);
                         this.score += scoreValue;
                         this.updateUI();
+                    }
+
+                    // Remove bullet if piercing logic says it should be removed
+                    if (shouldRemoveBullet) {
+                        this.bulletManager.removeBullet(bullet);
+                        break; // Break inner loop since bullet is removed
                     }
                 }
             }
@@ -456,12 +533,8 @@ class Game {
                 this.lastShieldTime = now;
                 this.shieldEndTime = now + GameConfig.SHIELD_OVERDRIVE.DURATION;
                 this.playerManager.activateShieldOverdrive();
-            }
-
-            // Handle collisions only if shield is not active
-            if (!this.isShieldActive) {
-                this.handleCollisions();
-            }
+            }            // Handle collisions - shield protection is handled inside the method
+            this.handleCollisions();
 
             // Update power-ups
             this.powerUpManager.update();
@@ -498,12 +571,11 @@ class Game {
                 const direction = new THREE.Vector3()
                     .copy(this.inputManager.mouseWorldPosition)
                     .sub(this.playerManager.getShip().position)
-                    .normalize();
-                  this.missileManager.launchMissile(
+                    .normalize();                  this.missileManager.launchMissile(
                     this.playerManager.getShip().position.clone(),
                     direction,
                     this.currentRound,
-                    (enemy: Enemy, score: number) => {
+                    (_, score: number) => {
                         this.score += score;
                         this.updateUI();
                     }
@@ -529,7 +601,6 @@ class Game {
             this.bulletManager.updateBullets();
             this.enemyManager.updateEnemies(this.sceneManager.getCamera());
             this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);
-            this.handleCollisions();
 
             // Check round completion
             const activeEnemies = this.enemyManager.getEnemies().length;

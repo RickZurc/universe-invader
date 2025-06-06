@@ -96,72 +96,53 @@ export class ParticleSystem {
         });
 
         return new THREE.Points(thrusterGeometry, thrusterMaterial);
-    }
-
-    static updateThrusterParticles(
+    }    static updateThrusterParticles(
         thrusterParticles: THREE.Points, 
-        isMoving: boolean, 
-        moveUp: boolean, 
-        moveDown: boolean, 
-        moveLeft: boolean, 
-        moveRight: boolean
+        shipRotation: number
     ) {
         const positions = thrusterParticles.geometry.attributes.position.array;
         const material = thrusterParticles.material as THREE.PointsMaterial;
 
-        if (isMoving) {
-            // Move existing particles
-            for (let i = 0; i < positions.length; i += 3) {
-                const particleSpeed = 0.1;
-                let xOffset = 0;
-                let yOffset = 0;
+        // Calculate the direction opposite to where the ship is facing
+        // Ship rotation is in radians, and ship faces forward (positive Y) at rotation 0
+        const thrustDirection = new THREE.Vector3(
+            -Math.sin(shipRotation + Math.PI / 2), // Opposite X component
+            -Math.cos(shipRotation + Math.PI / 2), // Opposite Y component  
+            0
+        );
 
-                if (moveUp) yOffset = -particleSpeed;
-                if (moveDown) yOffset = particleSpeed;
-                if (moveLeft) xOffset = particleSpeed;
-                if (moveRight) xOffset = -particleSpeed;
+        // Always update particles - thrusters are always active
+        for (let i = 0; i < positions.length; i += 3) {
+            const particleSpeed = 0.1;
+            
+            // Move particle in thrust direction
+            positions[i] += thrustDirection.x * particleSpeed;
+            positions[i + 1] += thrustDirection.y * particleSpeed;
+            
+            // Add slight random spread
+            positions[i] += (Math.random() - 0.5) * 0.02;
+            positions[i + 1] += (Math.random() - 0.5) * 0.02;
 
-                positions[i] += xOffset;
-                positions[i + 1] += yOffset;
+            const distanceFromCenter = Math.sqrt(
+                positions[i] * positions[i] + 
+                positions[i + 1] * positions[i + 1]
+            );
 
-                const distanceFromCenter = Math.sqrt(
-                    positions[i] * positions[i] + 
-                    positions[i + 1] * positions[i + 1]
-                );
-
-                if (distanceFromCenter > 2) {
-                    positions[i] = (Math.random() - 0.5) * 0.2;
-                    positions[i + 1] = (Math.random() - 0.5) * 0.2;
-                    positions[i + 2] = (Math.random() - 0.5) * 0.2;
-                }
-            }
-        } else {
-            // Clear all particles when ship is not moving
-            for (let i = 0; i < positions.length; i += 3) {
-                positions[i] = 0;
-                positions[i + 1] = 0;
-                positions[i + 2] = 0;
+            // Reset particles that go too far, spawn them near the ship rear
+            if (distanceFromCenter > 2) {
+                // Spawn particles slightly behind the ship center
+                const spawnDistance = 0.3;
+                positions[i] = thrustDirection.x * -spawnDistance + (Math.random() - 0.5) * 0.2;
+                positions[i + 1] = thrustDirection.y * -spawnDistance + (Math.random() - 0.5) * 0.2;
+                positions[i + 2] = (Math.random() - 0.5) * 0.1;
             }
         }
 
         thrusterParticles.geometry.attributes.position.needsUpdate = true;
-        material.opacity = isMoving ? 0.8 : 0;
-        material.size = isMoving ? 0.15 : 0.1;
-
-        // Rotate particles container based on movement direction
-        if (isMoving) {
-            let angle = 0;
-            if (moveUp && !moveLeft && !moveRight) angle = Math.PI;
-            else if (moveDown && !moveLeft && !moveRight) angle = 0;
-            else if (moveLeft && !moveUp && !moveDown) angle = -Math.PI/2;
-            else if (moveRight && !moveUp && !moveDown) angle = Math.PI/2;
-            else if (moveUp && moveLeft) angle = -Math.PI * 3/4;
-            else if (moveUp && moveRight) angle = Math.PI * 3/4;
-            else if (moveDown && moveLeft) angle = -Math.PI/4;
-            else if (moveDown && moveRight) angle = Math.PI/4;
-
-            thrusterParticles.rotation.z = angle;
-        }
+        
+        // Thrusters are always visible but with varying intensity
+        material.opacity = 0.7;
+        material.size = 0.12;
     }
 
     static createWaveEffect(scene: THREE.Scene, position: THREE.Vector3, color: number, radius: number) {

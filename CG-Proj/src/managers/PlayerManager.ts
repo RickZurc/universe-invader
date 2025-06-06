@@ -134,17 +134,10 @@ export class PlayerManager {
         const dx = mouseWorldPosition.x - this.playerShip.position.x;
         const dy = mouseWorldPosition.y - this.playerShip.position.y;
         const angle = Math.atan2(dy, dx);
-        this.playerShip.rotation.z = angle - Math.PI / 2;
-
-        // Update thruster particles
-        const isMoving = moveLeft || moveRight || moveUp || moveDown;
+        this.playerShip.rotation.z = angle - Math.PI / 2;        // Update thruster particles - always active, directional based on ship rotation
         ParticleSystem.updateThrusterParticles(
             this.thrusterParticles,
-            isMoving,
-            moveUp,
-            moveDown,
-            moveLeft,
-            moveRight
+            this.playerShip.rotation.z
         );
     }
 

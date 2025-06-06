@@ -6,6 +6,7 @@ export class StoreManager {
     private currentRound: number;
     private uiManager: UIManager;
     private onUpgrade: (type: string, cost: number) => void;
+    private piercingLevel: number = 0; // Track current piercing level
 
     constructor(uiManager: UIManager, onUpgrade: (type: string, cost: number) => void) {
         this.score = 0;
@@ -25,18 +26,26 @@ export class StoreManager {
         this.updateUpgradeButtons();
     }
 
+    setPiercingLevel(level: number) {
+        this.piercingLevel = level;
+        this.updateUpgradeButtons();
+    }
+
+    getPiercingLevel(): number {
+        return this.piercingLevel;
+    }
+
     private getScaledCost(baseCost: number): number {
         const scaleFactor = Math.pow(GameConfig.DIFFICULTY.UPGRADE_COST_SCALE_FACTOR, this.currentRound - 1);
         return Math.floor(baseCost * scaleFactor);
-    }
-
-    private updateUpgradeButtons() {
+    }    private updateUpgradeButtons() {
         const upgrades = [
             { id: 'health-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.HEALTH) },
             { id: 'damage-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE) },
             { id: 'speed-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED) },
             { id: 'firerate-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE) },
             { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) },
+            { id: 'piercing-upgrade', cost: this.getPiercingUpgradeCost() },
             { id: 'shield-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE) }
         ];
 
@@ -47,34 +56,48 @@ export class StoreManager {
             const button = document.getElementById(id) as HTMLButtonElement;
             if (button) {
                 const canAfford = this.score >= cost;
-                button.disabled = !canAfford;
-                if (canAfford) {
+                
+                // Special handling for piercing upgrade - disable if max level reached
+                const isMaxLevel = id === 'piercing-upgrade' && this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL;
+                
+                button.disabled = !canAfford || isMaxLevel;
+                if (canAfford && !isMaxLevel) {
                     button.classList.remove('disabled');
                 } else {
                     button.classList.add('disabled');
                 }
+                
                 const costSpan = button.querySelector('.upgrade-cost');
                 if (costSpan) {
-                    costSpan.textContent = cost.toString();
+                    if (isMaxLevel) {
+                        costSpan.textContent = 'MAX';
+                    } else {
+                        costSpan.textContent = cost.toString();
+                    }
+                }
+                
+                // Update button text to show current level for piercing
+                if (id === 'piercing-upgrade' && this.piercingLevel > 0) {
+                    const buttonText = button.querySelector('.upgrade-name') || button.childNodes[0];
+                    if (buttonText) {
+                        buttonText.textContent = `Piercing Bullets Lv.${this.piercingLevel}`;
+                    }
                 }
             }
         });
-    }
-
-    openStore() {
+    }    openStore() {
         const scaledCosts = {
             HEALTH: this.getScaledCost(GameConfig.UPGRADE_COSTS.HEALTH),
             DAMAGE: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE),
             SPEED: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED),
             FIRE_RATE: this.getScaledCost(GameConfig.UPGRADE_COSTS.FIRE_RATE),
             NANITE_DRONE: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE),
+            PIERCING_BULLETS: this.getPiercingUpgradeCost(),
             SHIELD_OVERDRIVE: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE)
         };
         this.uiManager.openStore(this.score, scaledCosts);
         this.updateUpgradeButtons();
-    }
-
-    private setupStoreListeners() {
+    }private setupStoreListeners() {
         const upgrades = [
             { 
                 id: 'health-upgrade', 
@@ -102,11 +125,16 @@ export class StoreManager {
                 getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE)
             },
             {
+                id: 'piercing-upgrade',
+                type: 'piercing',
+                getCost: () => this.getPiercingUpgradeCost()
+            },
+            {
                 id: 'shield-upgrade',
                 type: 'shield',
                 getCost: () => this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE)
             }
-        ];        upgrades.forEach(({ id, type, getCost }) => {
+        ];upgrades.forEach(({ id, type, getCost }) => {
             const button = document.getElementById(id) as HTMLButtonElement;
             if (button) {
                 button.addEventListener('click', () => {
@@ -125,5 +153,20 @@ export class StoreManager {
         document.getElementById('save-game')?.addEventListener('click', () => {
             // This will be handled by GameManager
         });
+    }
+
+    // Calculate cost for piercing upgrade based on current level
+    private getPiercingUpgradeCost(): number {
+        if (this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL) {
+            return Infinity; // Max level reached
+        }
+        
+        const nextLevel = this.piercingLevel + 1;
+        const baseCost = GameConfig.PIERCING_BULLETS.BASE_COST;
+        const multiplier = Math.pow(GameConfig.PIERCING_BULLETS.COST_MULTIPLIER, nextLevel - 1);
+        const levelCost = Math.floor(baseCost * multiplier);
+        
+        // Apply round scaling
+        return this.getScaledCost(levelCost);
     }
 }

@@ -49,16 +49,24 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         COLOR: 0x4444ff,        // Blue shield color
         OPACITY: 0.3,           // Shield transparency
         KEY: 'F',               // Key to activate ability
-    },
-
-    // Store costs - base costs before round scaling
+    },    // Store costs - base costs before round scaling
     UPGRADE_COSTS: {
         HEALTH: 600,    // Significant investment for survivability
         DAMAGE: 500,    // Higher cost for offensive power
         SPEED: 450,     // Movement is crucial for survival
         FIRE_RATE: 650,  // Most impactful upgrade has highest cost
         NANITE_DRONE: 800, // Expensive but powerful defensive upgrade
-        SHIELD_OVERDRIVE: 2500 // Very expensive endgame upgrade
+        SHIELD_OVERDRIVE: 2500, // Very expensive endgame upgrade
+        PIERCING_BULLETS: 1200 // Expensive piercing upgrade - starts high and scales up
+    },
+
+    // Piercing Bullets settings
+    PIERCING_BULLETS: {
+        BASE_COST: 1200,         // Base cost for first level
+        COST_MULTIPLIER: 1.8,    // Cost multiplier per level (expensive scaling)
+        MAX_LEVEL: 5,            // Maximum piercing level
+        PENETRATION_PER_LEVEL: 1, // Each level adds 1 more enemy penetration
+        BASE_PENETRATION: 1,     // Level 1 = 2 enemies, Level 2 = 3 enemies, etc.
     },
 
     // Nanite Drone settings
