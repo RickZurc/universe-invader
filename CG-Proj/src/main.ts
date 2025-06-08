@@ -1,4 +1,3 @@
-// filepath: c:\Users\tugam\Desktop\CG\Projecto\CG-Proj\src\main.ts
 import './style.css';
 import * as THREE from 'three';
 import { GameConfig } from './config/GameConfig';

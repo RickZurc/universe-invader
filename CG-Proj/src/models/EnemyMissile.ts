@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GameConfig } from '../config/GameConfig';
 import { ParticleSystem } from '../systems/ParticleSystem';
 
 export class EnemyMissile extends THREE.Mesh {
