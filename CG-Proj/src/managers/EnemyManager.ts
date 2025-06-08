@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GameConfig } from '../config/GameConfig';
 import { Enemy } from '../models/Enemy';
-import { BossEnemy, NormalEnemy, SpecialEnemy } from '../models/EnemyTypes';
+import { BossEnemy, NormalEnemy, SpecialEnemy, ShifterEnemy, DestroyerEnemy } from '../models/EnemyTypes';
 import { ParticleSystem } from '../systems/ParticleSystem';
 
 export class EnemyManager {    private scene: THREE.Scene;
@@ -12,17 +12,20 @@ export class EnemyManager {    private scene: THREE.Scene;
     private lastSpawnTime: number = Date.now();
     private timeBetweenSpawns: number = GameConfig.ENEMY_SPAWN_TIME;
     private currentRound: number;
+    private onPlayerHit?: () => void;
 
     private enemiesBeingKnockedBack: Map<Enemy, {
         direction: THREE.Vector3,
         endTime: number
-    }> = new Map();
-
-    constructor(scene: THREE.Scene, playerShip: THREE.Group) {
+    }> = new Map();    constructor(scene: THREE.Scene, playerShip: THREE.Group) {
         this.scene = scene;
         this.playerShip = playerShip;
         this.currentRound = 1;
-    }      createEnemyWave() {
+    }
+
+    setPlayerHitCallback(callback: () => void) {
+        this.onPlayerHit = callback;
+    }createEnemyWave() {
         const { 
             MAX_ENEMIES_PER_WAVE, 
             SPAWN_SPEED_SCALE_CAP, 
@@ -75,20 +78,31 @@ export class EnemyManager {    private scene: THREE.Scene;
 
         // Create enemy geometry
         const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
-        let enemy: Enemy;
-
-        if (shouldSpawnBoss) {
+        let enemy: Enemy;        if (shouldSpawnBoss) {
             // Boss health scales faster and gets significant boosts every 5 rounds
             const { BOSS_HEALTH_INCREASE_PER_5_ROUNDS } = GameConfig.DIFFICULTY;
             const bossBonus = 1 + Math.floor(this.currentRound / 5) * BOSS_HEALTH_INCREASE_PER_5_ROUNDS;
             const bossHealth = Math.floor(baseHealth * 3 * bossBonus);
             enemy = new BossEnemy(enemyGeometry, null!, bossHealth);
             console.log(`Spawning boss (HP: ${bossHealth}) in round ${this.currentRound}`);
-        } else if (Math.random() < this.calculateSpecialEnemyChance()) {
-            // Special enemies have 50% more health than normal enemies
-            enemy = new SpecialEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.5));
         } else {
-            enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
+            // Determine enemy type based on probabilities
+            const specialChance = this.calculateSpecialEnemyChance();
+            const shifterChance = this.calculateShifterEnemyChance();
+            const destroyerChance = this.calculateDestroyerEnemyChance();
+            const rand = Math.random();
+              if (rand < shifterChance) {
+                // Shifter enemies have low health but teleportation abilities
+                enemy = new ShifterEnemy(enemyGeometry, null!, Math.floor(baseHealth * 0.4));
+            } else if (rand < shifterChance + destroyerChance) {
+                // Destroyer enemies have medium health and fire missiles
+                enemy = new DestroyerEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.2));
+            } else if (rand < shifterChance + destroyerChance + specialChance) {
+                // Special enemies have 50% more health than normal enemies
+                enemy = new SpecialEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.5));
+            } else {
+                enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
+            }
         }
         
         // Position and add enemy
@@ -222,39 +236,62 @@ export class EnemyManager {    private scene: THREE.Scene;
                     this.enemiesBeingKnockedBack.delete(enemy);
                 }
                 continue;
+            }            // Handle special enemy behaviors
+            if (enemy instanceof DestroyerEnemy) {
+                // Destroyer uses special distance-keeping AI and missile firing
+                enemy.updateDestroyerBehavior(this.playerShip.position, () => {
+                    // Handle player damage when hit by destroyer missile
+                    if (this.onPlayerHit) {
+                        this.onPlayerHit();
+                    }
+                });
+            } else if (enemy instanceof ShifterEnemy) {
+                // ShifterEnemy teleportation behavior would need bullets from main game
+                // For now, just use normal movement until bullets are available
+                const direction = new THREE.Vector3()
+                    .copy(this.playerShip.position)
+                    .sub(enemy.position)
+                    .normalize();
+
+                const baseSpeed = 0.05; // Shifters are slightly faster
+                const speed = baseSpeed * speedMultiplier;
+                enemy.position.add(direction.multiplyScalar(speed));
+            } else {
+                // Normal enemy movement for other types
+                const direction = new THREE.Vector3()
+                    .copy(this.playerShip.position)
+                    .sub(enemy.position)
+                    .normalize();
+
+                const baseSpeed = enemy instanceof BossEnemy ? 0.03 : 
+                                enemy instanceof SpecialEnemy ? 0.06 : 0.04;
+                const speed = baseSpeed * speedMultiplier;
+
+                enemy.position.add(direction.multiplyScalar(speed));
             }
 
-            // Normal enemy movement
-            const direction = new THREE.Vector3()
-                .copy(this.playerShip.position)
-                .sub(enemy.position)
-                .normalize();
-
-            const baseSpeed = enemy instanceof BossEnemy ? 0.03 : 
-                            enemy instanceof SpecialEnemy ? 0.06 : 0.04;
-            const speed = baseSpeed * speedMultiplier;
-
-            enemy.position.add(direction.multiplyScalar(speed));
-
-            // Update enemy orientation to face player
-            enemy.lookAt(this.playerShip.position);
+            // Update enemy orientation to face player (except for Destroyers who handle their own orientation)
+            if (!(enemy instanceof DestroyerEnemy)) {
+                enemy.lookAt(this.playerShip.position);
+            }
         }
     }
 
     getEnemies() {
         return this.enemies;
-    }
-
-    removeEnemy(enemy: THREE.Mesh) {
+    }    removeEnemy(enemy: THREE.Mesh) {
         const index = this.enemies.indexOf(enemy);
         if (index > -1) {
             this.enemies.splice(index, 1);
             this.scene.remove(enemy);
+            if (enemy instanceof DestroyerEnemy) {
+                enemy.cleanup(); // Clean up missiles
+            }
             if (enemy instanceof Enemy) {
                 enemy.destroy();
             }
         }
-    }    getRemainingEnemies() {
+    }getRemainingEnemies() {
         return this.enemiesRemainingToSpawn;
     }
 
@@ -281,7 +318,8 @@ export class EnemyManager {    private scene: THREE.Scene;
         const boss = new BossEnemy(enemyGeometry, null!, baseHealth * 3);
         
         // Find valid spawn position
-        let validPosition = false;        let x: number = 0;
+        let validPosition = false;
+        let x: number = 0;
         let y: number = 0;
         let attempts = 0;
         const maxAttempts = 100;
@@ -314,12 +352,71 @@ export class EnemyManager {    private scene: THREE.Scene;
         this.enemies.push(boss);
         this.scene.add(boss);
         return boss;
-    }    
-    private calculateSpecialEnemyChance(): number {
+    }    spawnShifterEnemy(): ShifterEnemy {
+        const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const { HEALTH_SCALE_CAP, HEALTH_SCALE_FACTOR } = GameConfig.DIFFICULTY;
+        const cappedRound = Math.min(HEALTH_SCALE_CAP, this.currentRound - 1);
+        const healthMultiplier = Math.pow(HEALTH_SCALE_FACTOR, cappedRound);
+        const baseHealth = GameConfig.ENEMY_BASE_HEALTH * healthMultiplier;
+        const shifterHealth = Math.floor(baseHealth * 0.4); // Shifters have lower health
+        
+        const shifter = new ShifterEnemy(enemyGeometry, null!, shifterHealth);
+        this.positionEnemy(shifter);
+        this.enemies.push(shifter);
+        this.scene.add(shifter);
+        
+        return shifter;
+    }
+
+    spawnDestroyerEnemy(): DestroyerEnemy {
+        const enemyGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const { HEALTH_SCALE_CAP, HEALTH_SCALE_FACTOR } = GameConfig.DIFFICULTY;
+        const cappedRound = Math.min(HEALTH_SCALE_CAP, this.currentRound - 1);
+        const healthMultiplier = Math.pow(HEALTH_SCALE_FACTOR, cappedRound);
+        const baseHealth = GameConfig.ENEMY_BASE_HEALTH * healthMultiplier;
+        const destroyerHealth = Math.floor(baseHealth * 1.2); // Destroyers have higher health
+        
+        const destroyer = new DestroyerEnemy(enemyGeometry, null!, destroyerHealth);
+        this.positionEnemy(destroyer);
+        this.enemies.push(destroyer);
+        this.scene.add(destroyer);
+        
+        return destroyer;
+    }      private calculateSpecialEnemyChance(): number {
         const { SPECIAL_ENEMY_BASE_CHANCE, SPECIAL_ENEMY_MAX_CHANCE, SPECIAL_ENEMY_INCREASE_PER_ROUND } = GameConfig.DIFFICULTY;
         return Math.min(
             SPECIAL_ENEMY_MAX_CHANCE,
             SPECIAL_ENEMY_BASE_CHANCE + (this.currentRound - 1) * SPECIAL_ENEMY_INCREASE_PER_ROUND
+        );
+    }
+
+    private calculateShifterEnemyChance(): number {
+        // Shifter enemies start appearing from round 2 with low probability
+        if (this.currentRound < 2) return 0;
+        
+        // Base 5% chance, increases by 2% per round, capped at 15%
+        const baseChance = 0.05;
+        const increasePerRound = 0.02;
+        const maxChance = 0.15;
+        
+        return Math.min(
+            maxChance,
+            baseChance + (this.currentRound - 2) * increasePerRound
+        );
+    }
+
+    private calculateDestroyerEnemyChance(): number {
+        // Destroyer enemies start appearing from round 4 with low probability
+        if (this.currentRound < 4) return 0;
+        
+        // Base 3% chance, increases by 1.5% per round, capped at 12%
+        const baseChance = 0.03;
+        const increasePerRound = 0.015;
+        const maxChance = 0.12;
+        
+        return Math.min(
+            maxChance,
+            baseChance + (this.currentRound - 4) * increasePerRound
         );
     }
 }

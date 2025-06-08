@@ -14,18 +14,25 @@ export class Enemy extends THREE.Mesh {
     private isFrozen: boolean = false;
     private frozenEndTime: number = 0;
     private normalMaterial: THREE.MeshPhongMaterial;
-    private frozenMaterial: THREE.MeshBasicMaterial;
-
-    constructor(geometry: THREE.BoxGeometry, _material: THREE.MeshBasicMaterial, baseHealth: number, type: typeof EnemyType[EnemyTypeKey] = EnemyType.Normal) {
+    private frozenMaterial: THREE.MeshBasicMaterial;    constructor(geometry: THREE.BoxGeometry, _material: THREE.MeshBasicMaterial, baseHealth: number, type: typeof EnemyType[EnemyTypeKey] = EnemyType.Normal) {
         const enemyMaterial = new THREE.MeshPhongMaterial({
-            color: type === EnemyType.Boss ? 0xff0000 : type === EnemyType.Special ? 0x00ffff : 0xff0000,
-            emissive: type === EnemyType.Boss ? 0x440000 : type === EnemyType.Special ? 0x004444 : 0x220000,
+            color: type === EnemyType.Boss ? 0xff0000 : 
+                   type === EnemyType.Special ? 0x00ffff : 
+                   type === EnemyType.Shifter ? 0xffa500 : 
+                   type === EnemyType.Destroyer ? 0x44ff44 : 0xff0000,
+            emissive: type === EnemyType.Boss ? 0x440000 : 
+                      type === EnemyType.Special ? 0x004444 : 
+                      type === EnemyType.Shifter ? 0x442200 : 
+                      type === EnemyType.Destroyer ? 0x114411 : 0x220000,
             shininess: 30
         });
         super(geometry, enemyMaterial);
         
         const enemyLight = new THREE.PointLight(
-            type === EnemyType.Boss ? 0xff0000 : type === EnemyType.Special ? 0x00ffff : 0xff0000,
+            type === EnemyType.Boss ? 0xff0000 : 
+            type === EnemyType.Special ? 0x00ffff : 
+            type === EnemyType.Shifter ? 0xffa500 : 
+            type === EnemyType.Destroyer ? 0x44ff44 : 0xff0000,
             0.5,
             3
         );
@@ -47,7 +54,7 @@ export class Enemy extends THREE.Mesh {
         });
 
         this.setupHealthBar();
-    }    private setupHealthBar() {
+    }private setupHealthBar() {
         // Create container
         this.healthContainer = document.createElement('div');
         this.healthContainer.className = 'enemy-health-container';
@@ -113,9 +120,7 @@ export class Enemy extends THREE.Mesh {
         this.isHit = true;
         this.hitTime = Date.now();
         (this.material as THREE.MeshBasicMaterial).color.setHex(0xff8080);
-    }
-
-    updateHitEffect() {
+    }    updateHitEffect() {
         if (this.isHit && Date.now() - this.hitTime > 500) {
             this.isHit = false;
             let originalColor;
@@ -125,6 +130,9 @@ export class Enemy extends THREE.Mesh {
                     break;
                 case EnemyType.Special:
                     originalColor = 'cyan';
+                    break;
+                case EnemyType.Shifter:
+                    originalColor = 'orange';
                     break;
                 default:
                     originalColor = 'red';
@@ -237,12 +245,15 @@ export class Enemy extends THREE.Mesh {
 
             // Animate particles
             let frame = 0;
-            const animate = () => {
-                if (frame++ >= 30) { // Run for 30 frames
+            const animate = () => {                if (frame++ >= 30) { // Run for 30 frames
                     particles.forEach(p => {
                         this.remove(p);
                         p.geometry.dispose();
-                        p.material.dispose();
+                        if (Array.isArray(p.material)) {
+                            p.material.forEach((m: THREE.Material) => m.dispose());
+                        } else {
+                            (p.material as THREE.Material).dispose();
+                        }
                     });
                     return;
                 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Enemy } from './Enemy';
-import { BossEnemy, SpecialEnemy } from './EnemyTypes';
+import { BossEnemy, SpecialEnemy, ShifterEnemy } from './EnemyTypes';
 import { GameConfig } from '../config/GameConfig';
 import { ParticleSystem } from '../systems/ParticleSystem';
 import type { EnemyManager } from '../managers/EnemyManager';
@@ -173,17 +173,20 @@ export class HomingMissile extends THREE.Mesh {
                 // Update camera matrices before updating health bars
                 const camera = this.sceneManager.getCamera();
                 camera.updateMatrixWorld();
-                camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-                enemy.updateHealthBar(camera);                if (enemy.health <= 0) {
+                camera.matrixWorldInverse.copy(camera.matrixWorld).invert();                enemy.updateHealthBar(camera);
+                
+                if (enemy.health <= 0) {
                     // Calculate score based on enemy type and round
                     const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
                     const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
                     let scoreValue = Math.floor(75 * roundScoreMultiplier); // Base score for normal enemies
-
+                    
                     if (enemy instanceof BossEnemy) {
                         scoreValue = Math.floor(400 * roundScoreMultiplier);
                     } else if (enemy instanceof SpecialEnemy) {
                         scoreValue = Math.floor(200 * roundScoreMultiplier);
+                    } else if (enemy instanceof ShifterEnemy) {
+                        scoreValue = Math.floor(150 * roundScoreMultiplier);
                     }
 
                     // Remove enemy and trigger callback with score value

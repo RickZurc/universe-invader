@@ -12,7 +12,7 @@ import { StoreManager } from './managers/StoreManager';
 import { GameManager } from './managers/GameManager';
 import { ParticleSystem } from './systems/ParticleSystem';
 import { Enemy } from './models/Enemy';
-import { BossEnemy, SpecialEnemy } from './models/EnemyTypes';
+import { BossEnemy, SpecialEnemy, ShifterEnemy, DestroyerEnemy } from './models/EnemyTypes';
 import { PowerUpType } from './models/PowerUp';
 import type { GameState } from './types/types';
 import { PowerUpManager } from './managers/PowerUpManager';
@@ -93,9 +93,7 @@ class Game {
                 this.showDebugFeedback('Failed to spawn enemy', true);
                 console.error(error);
             }
-        });
-
-        document.getElementById('debug-spawn-boss')?.addEventListener('click', () => {
+        });        document.getElementById('debug-spawn-boss')?.addEventListener('click', () => {
             if (!this.isDebugMode) return;
             try {
                 this.enemyManager.spawnBossEnemy();
@@ -103,6 +101,30 @@ class Game {
                 this.updateUI();
             } catch (error: any) {
                 this.showDebugFeedback(error.message || 'Failed to spawn boss', true);
+                console.error(error);
+            }
+        });
+
+        document.getElementById('debug-spawn-shifter')?.addEventListener('click', () => {
+            if (!this.isDebugMode) return;
+            try {
+                this.enemyManager.spawnShifterEnemy();
+                this.showDebugFeedback('Shifter enemy spawned');
+                this.updateUI();
+            } catch (error: any) {
+                this.showDebugFeedback(error.message || 'Failed to spawn shifter', true);
+                console.error(error);
+            }
+        });
+
+        document.getElementById('debug-spawn-destroyer')?.addEventListener('click', () => {
+            if (!this.isDebugMode) return;
+            try {
+                this.enemyManager.spawnDestroyerEnemy();
+                this.showDebugFeedback('Destroyer enemy spawned');
+                this.updateUI();
+            } catch (error: any) {
+                this.showDebugFeedback(error.message || 'Failed to spawn destroyer', true);
                 console.error(error);
             }
         });
@@ -271,9 +293,30 @@ class Game {
                 console.error('Shield toggle error:', error);
             }
         });
-    }
-
-    private initializeGame() {
+    }    private initializeGame() {
+        // Set up the enemy manager callback to handle Destroyer missile hits
+        this.enemyManager.setPlayerHitCallback(() => {
+            // Calculate missile damage, scaling with round number
+            const baseDamage = GameConfig.DESTROYER.MISSILE_DAMAGE;
+            const damageMult = Math.min(2.0, 1 + (this.currentRound - 1) * 0.1);
+            const finalDamage = Math.floor(baseDamage * damageMult);
+            
+            // Only damage player if shield is not active
+            if (!this.isShieldActive) {
+                this.playerManager.takeDamage(finalDamage);
+                
+                // Show damage popup near player
+                const playerPosition = this.playerManager.getShip().position;
+                DamagePopup.show(finalDamage, playerPosition.clone().add(new THREE.Vector3(0, 1, 0)), this.sceneManager.getCamera());
+                
+                if (this.playerManager.getHealth() <= 0) {
+                    this.gameOver = true;
+                    this.uiManager.showGameOver(this.score, this.currentRound);
+                }
+                this.updateUI();
+            }
+        });
+        
         const savedGame = this.gameManager.loadGame();
         if (savedGame) {
             this.loadGameState(savedGame);
@@ -511,6 +554,12 @@ class Game {
                 // Always remove enemy and create explosion, regardless of shield status
                 this.enemyManager.removeEnemy(enemy);
                 ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), 0xff0000);
+            }        }        // Check if Shifter enemies should teleport to avoid bullets
+        for (let enemy of enemies) {
+            if (enemy instanceof ShifterEnemy) {
+                if (enemy.shouldTeleport(bullets)) {
+                    enemy.teleport();
+                }
             }
         }
 
@@ -551,29 +600,80 @@ class Game {
                         // Scale score values with round number
                         const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
                         const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
-                        let scoreValue = Math.floor(75 * roundScoreMultiplier);
-
-                        if (enemy instanceof BossEnemy) {
+                        let scoreValue = Math.floor(75 * roundScoreMultiplier);                        if (enemy instanceof BossEnemy) {
                             explosionColor = 0xff0000;
                             scoreValue = Math.floor(400 * roundScoreMultiplier);
                         } else if (enemy instanceof SpecialEnemy) {
                             explosionColor = 0x00ffff;
                             scoreValue = Math.floor(200 * roundScoreMultiplier);
-                        }                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
+                        } else if (enemy instanceof ShifterEnemy) {
+                            explosionColor = 0xffa500;
+                            scoreValue = Math.floor(150 * roundScoreMultiplier); // Mid-range score for agile enemy
+                        }ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
                         this.enemyManager.removeEnemy(enemy);
                         this.score += scoreValue;
                         this.updateUI();
-                    }
-
-                    // Remove bullet if piercing logic says it should be removed
+                    }                    // Remove bullet if piercing logic says it should be removed
                     if (shouldRemoveBullet) {
                         this.bulletManager.removeBullet(bullet);
                         break;
                     }
                 }
             }
+        }        // Check bullet collisions with enemy missiles (Destroyer missiles)
+        for (let bullet of bullets) {
+            for (let enemy of enemies) {
+                if (enemy instanceof DestroyerEnemy) {
+                    // Get enemy missiles from DestroyerEnemy
+                    const enemyMissiles = enemy.getEnemyMissiles();
+                    if (enemyMissiles && enemyMissiles.length > 0) {
+                        for (let i = enemyMissiles.length - 1; i >= 0; i--) {
+                            const missile = enemyMissiles[i];
+                            const bulletToMissileDist = new THREE.Vector3()
+                                .copy(bullet.position)
+                                .sub(missile.position)
+                                .length();                            if (bulletToMissileDist < 0.8) {
+                                // Bullet hit enemy missile - destroy both
+                                
+                                // First, let the missile explode to clean up its trail particles
+                                missile.explode();
+                                
+                                // Create additional explosion effect at missile position
+                                ParticleSystem.createExplosion(
+                                    this.sceneManager.getScene(), 
+                                    missile.position.clone(), 
+                                    0xffaa00 // Orange explosion for destroyed missile
+                                );
+
+                                // Award points for destroying enemy missile
+                                const missileScore = 25; // Small bonus for defensive play
+                                this.score += missileScore;
+                                  // Show damage popup for missile destruction
+                                DamagePopup.show(
+                                    missileScore, 
+                                    missile.position.clone().add(new THREE.Vector3(0, 1, 0)), 
+                                    this.sceneManager.getCamera(),
+                                    { type: 'powerup' }
+                                );
+
+                                // Remove missile from destroyer's missile array and scene
+                                enemy.removeMissile(missile);
+
+                                // Remove bullet
+                                this.bulletManager.removeBullet(bullet);
+                                
+                                // Update UI to reflect score change
+                                this.updateUI();
+                                
+                                // Break out of missile loop since bullet is destroyed
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
-    }    private triggerSuperNova() {
+    }private triggerSuperNova() {
         // Get all enemies on screen - create a copy to avoid modification issues
         const enemies = [...this.enemyManager.getEnemies()];
         const playerPosition = this.playerManager.getShip().position;

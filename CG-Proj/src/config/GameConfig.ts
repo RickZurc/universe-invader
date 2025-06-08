@@ -133,9 +133,7 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         TURN_SPEED: 0.1,          // How fast it can turn to track enemies
         LIFETIME: 5000,           // How long the missile exists before expiring
         COOLDOWN: 1000,          // How long before the player can use another missile
-    },
-
-    // EMP Bomb settings
+    },    // EMP Bomb settings
     EMP_BOMB: {        
         RADIUS: 8,                // Area of effect radius
         EFFECT_DURATION: 4000,    // How long enemies remain frozen (4 seconds)
@@ -147,5 +145,17 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         CHAIN_RADIUS: 2,          // Distance for chain freezing between enemies
         CHAIN_CHANCE: 0.5,        // Chance to chain to nearby enemies
         COLOR: 0x00ffff,         // Cyan color for all EMP effects
+    },    // Destroyer Enemy settings
+    DESTROYER: {
+        PREFERRED_DISTANCE: 20,   // Distance the Destroyer tries to maintain from player
+        MIN_DISTANCE: 15,         // Minimum distance before retreating
+        MAX_DISTANCE: 30,         // Maximum distance before advancing
+        MISSILE_FIRE_RATE: 3000,  // Time between missile shots (3 seconds)
+        MISSILE_DAMAGE: 35,       // Damage dealt by Destroyer missiles
+        MISSILE_ACCURACY: 0.8,    // How accurately missiles track (0.0 to 1.0)
+        RETREAT_SPEED: 0.08,      // Speed when moving away from player
+        ADVANCE_SPEED: 0.04,      // Speed when moving toward optimal range
+        STRAFE_SPEED: 0.06,       // Speed when moving sideways to maintain distance
+        COLOR: 0x44ff44,          // Green color for Destroyer
     },
 } as const;
