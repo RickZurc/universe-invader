@@ -42,20 +42,19 @@ export class UIManager {
             // Create a dummy element to avoid null reference errors
             this.shieldControlItem = document.createElement('div');
             this.shieldControlItem.style.display = 'none';
-        };
-
-        // Create missile count element
+        };        // Create missile count element
         this.missileCountElement = document.createElement('div');
         this.missileCountElement.id = 'missile-count';
         this.missileCountElement.style.cssText = `
             position: fixed;
-            bottom: 50px;
+            bottom: 90px;
             left: 20px;
             color: #ff00ff;
             font-family: Arial, sans-serif;
-            font-size: 24px;
+            font-size: 20px;
+            font-weight: bold;
             text-shadow: 0 0 5px #ff00ff;
-            z-index: 100;
+            z-index: 101;
         `;
         document.body.appendChild(this.missileCountElement);
 
@@ -194,7 +193,7 @@ export class UIManager {
         } catch (error) {
             console.error('Error closing game over modal:', error);
         }
-    }    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number, score?: number, missiles?: number, drones?: number, superBulletLevel?: number) {
+    }    openDebugMenu(playerHealth: number, bulletDamage: number, moveSpeed: number, fireRate: number, score?: number, missiles?: number, drones?: number, superBulletLevel?: number, glitchedBulletLevel?: number) {
         if (this.debugModal) {
             (document.getElementById('debug-health') as HTMLInputElement).value = playerHealth.toString();
             (document.getElementById('debug-damage') as HTMLInputElement).value = bulletDamage.toString();
@@ -213,6 +212,9 @@ export class UIManager {
             }
             if (superBulletLevel !== undefined) {
                 (document.getElementById('debug-super-bullet') as HTMLInputElement).value = superBulletLevel.toString();
+            }
+            if (glitchedBulletLevel !== undefined) {
+                (document.getElementById('debug-glitched-bullet') as HTMLInputElement).value = glitchedBulletLevel.toString();
             }
             
             this.debugModal.style.display = 'block';
@@ -329,5 +331,79 @@ export class UIManager {
                 feedbackDiv.className = 'debug-feedback';
             }, 3000);
         }
+    }
+
+    // Create screen flash effect for Super Nova
+    createScreenFlash() {
+        // Create flash overlay
+        const flashOverlay = document.createElement('div');
+        flashOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,170,0,0.6) 50%, rgba(255,100,0,0.3) 100%);
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+        `;
+        
+        document.body.appendChild(flashOverlay);
+        
+        // Flash sequence
+        setTimeout(() => {
+            flashOverlay.style.opacity = '1';
+        }, 10);
+        
+        setTimeout(() => {
+            flashOverlay.style.opacity = '0';
+        }, GameConfig.SUPER_NOVA.SCREEN_FLASH_DURATION);
+        
+        setTimeout(() => {
+            document.body.removeChild(flashOverlay);
+        }, GameConfig.SUPER_NOVA.SCREEN_FLASH_DURATION + 200);
+        
+        // Create Super Nova text popup
+        this.showSuperNovaText();
+    }
+
+    // Show "SUPER NOVA!" text
+    private showSuperNovaText() {
+        const textElement = document.createElement('div');
+        textElement.textContent = '🌟 SUPER NOVA! 🌟';
+        textElement.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #ffaa00;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(255,170,0,0.8);
+            z-index: 10000;
+            pointer-events: none;
+            animation: superNovaText 2s ease-out forwards;
+        `;
+        
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes superNovaText {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+                80% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(textElement);
+        
+        // Remove after animation
+        setTimeout(() => {
+            document.body.removeChild(textElement);
+            document.head.removeChild(style);
+        }, 2000);
     }
 }

@@ -8,12 +8,13 @@ export class BulletManager {
     private bulletDamage: number;
     private piercingLevel: number = 0; // Level 0 = no piercing, Level 1+ = piercing
     private superBulletLevel: number = 0; // Level 0 = no critical hits, Level 1+ = critical hits
+    private glitchedBulletLevel: number = 0; // Level 0 = no glitched bullets, Level 1+ = glitched bullets
 
     constructor(scene: THREE.Scene, playerShip: THREE.Group) {
         this.scene = scene;
         this.playerShip = playerShip;
         this.bulletDamage = GameConfig.INITIAL_BULLET_DAMAGE;
-    }    shoot(mouseWorldPosition: THREE.Vector3) {
+    }shoot(mouseWorldPosition: THREE.Vector3) {
         // Determine if this is a critical hit
         const critChance = this.superBulletLevel * GameConfig.SUPER_BULLET.CRIT_CHANCE_PER_LEVEL;
         const isCritical = Math.random() * 100 < critChance;
@@ -66,15 +67,21 @@ export class BulletManager {
         
         this.bullets.push(bullet);
         this.scene.add(bullet);
-    }
-
-    updateBullets() {
+    }    updateBullets() {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
-            const bulletSpeed = GameConfig.BULLET_SPEED;
             
-            bullet.position.x += bullet.userData.directionX * bulletSpeed;
-            bullet.position.y += bullet.userData.directionY * bulletSpeed;
+            // Handle movement for different bullet types
+            if (bullet.userData.isGlitched) {
+                // Glitched bullets use their stored direction and speed
+                const speed = bullet.userData.speed || GameConfig.BULLET_SPEED;
+                bullet.position.add(bullet.userData.direction.clone().multiplyScalar(speed));
+            } else {
+                // Regular bullets use the old system
+                const bulletSpeed = GameConfig.BULLET_SPEED;
+                bullet.position.x += bullet.userData.directionX * bulletSpeed;
+                bullet.position.y += bullet.userData.directionY * bulletSpeed;
+            }
             
             if (bullet.position.distanceTo(this.playerShip.position) > 30) {
                 this.scene.remove(bullet);
@@ -113,6 +120,14 @@ export class BulletManager {
 
     getSuperBulletLevel() {
         return this.superBulletLevel;
+    }
+
+    setGlitchedBulletLevel(level: number) {
+        this.glitchedBulletLevel = Math.max(0, Math.min(level, GameConfig.GLITCHED_BULLET.MAX_LEVEL));
+    }
+
+    getGlitchedBulletLevel() {
+        return this.glitchedBulletLevel;
     }
 
     // Get bullet damage, accounting for critical hits
@@ -154,5 +169,80 @@ export class BulletManager {
         
         // Remove bullet if no more piercing left
         return bullet.userData.piercingLeft <= 0;
+    }    // Create glitched bullets that target the closest enemy
+    createGlitchedBullets(fromPosition: THREE.Vector3, enemies: any[], excludeEnemy?: any) {
+        if (this.glitchedBulletLevel === 0 || enemies.length === 0) return;
+
+        // Performance safeguard: limit total bullets
+        const currentBulletCount = this.bullets.length;
+        if (currentBulletCount > 50) return; // Prevent too many bullets
+
+        const numBullets = Math.min(
+            this.glitchedBulletLevel * GameConfig.GLITCHED_BULLET.BULLETS_PER_LEVEL,
+            enemies.length - (excludeEnemy ? 1 : 0) // Don't create more bullets than available targets
+        );
+        
+        for (let i = 0; i < numBullets; i++) {
+            // Find closest enemy (excluding the one that was just hit)
+            let closestEnemy = null;
+            let closestDistance = Infinity;
+            
+            for (const enemy of enemies) {
+                if (enemy === excludeEnemy) continue;
+                
+                const distance = new THREE.Vector3()
+                    .copy(fromPosition)
+                    .sub(enemy.position)
+                    .length();
+                    
+                if (distance <= GameConfig.GLITCHED_BULLET.SEARCH_RADIUS && distance < closestDistance) {
+                    closestDistance = distance;
+                    closestEnemy = enemy;
+                }
+            }
+            
+            if (closestEnemy) {
+                this.createGlitchedBullet(fromPosition, closestEnemy.position);
+            }
+        }
+    }
+
+    // Create a single glitched bullet
+    private createGlitchedBullet(fromPosition: THREE.Vector3, targetPosition: THREE.Vector3) {
+        // Create glitched bullet with unique visual style
+        const bulletGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.8, 6); // Hexagonal for "glitched" look
+        const bulletMaterial = new THREE.MeshPhongMaterial({ 
+            color: GameConfig.GLITCHED_BULLET.VISUAL_COLOR,
+            emissive: 0x440044,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.8
+        });
+        const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+        
+        // Add pulsing light effect
+        const bulletLight = new THREE.PointLight(GameConfig.GLITCHED_BULLET.VISUAL_COLOR, 0.6, 3);
+        bullet.add(bulletLight);
+        
+        // Position the bullet
+        bullet.position.copy(fromPosition);
+        
+        // Calculate direction to target
+        const direction = new THREE.Vector3()
+            .copy(targetPosition)
+            .sub(fromPosition)
+            .normalize();
+          // Store bullet data - glitched bullets don't pierce and don't trigger more glitched bullets
+        bullet.userData = {
+            direction: direction,
+            speed: GameConfig.BULLET_SPEED * GameConfig.GLITCHED_BULLET.SPEED_MULTIPLIER,
+            isGlitched: true,
+            isCritical: false,
+            piercingLeft: 0, // Glitched bullets never pierce
+            hitEnemies: new Set() // Always initialize for tracking
+        };
+        
+        this.bullets.push(bullet);
+        this.scene.add(bullet);
     }
 }

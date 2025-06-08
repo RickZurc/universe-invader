@@ -58,7 +58,8 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         NANITE_DRONE: 800, // Expensive but powerful defensive upgrade
         SHIELD_OVERDRIVE: 2500, // Very expensive endgame upgrade
         PIERCING_BULLETS: 1200, // Expensive piercing upgrade - starts high and scales up
-        SUPER_BULLET: 800 // Super Bullet critical hit upgrade
+        SUPER_BULLET: 800, // Super Bullet critical hit upgrade
+        GLITCHED_BULLET: 1200 // Glitched Bullet upgrade - very expensive
     },// Piercing Bullets settings
     PIERCING_BULLETS: {
         BASE_COST: 1200,         // Base cost for first level
@@ -77,6 +78,17 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         LIGHT_INTENSITY: 1.5,    // Critical bullets glow brighter
     },
 
+    // Glitched Bullet settings
+    GLITCHED_BULLET: {
+        BASE_COST: 1200,         // Base cost for first level (expensive!)
+        COST_MULTIPLIER: 2.0,    // Cost multiplier per level (very expensive scaling)
+        MAX_LEVEL: 5,            // Maximum glitched bullet level
+        BULLETS_PER_LEVEL: 1,    // Number of additional bullets created per level
+        VISUAL_COLOR: 0xff00ff,  // Magenta/purple color for glitched bullets
+        SPEED_MULTIPLIER: 1.2,   // Glitched bullets travel 20% faster
+        SEARCH_RADIUS: 15,       // Search radius for finding closest enemy
+    },
+
     // Nanite Drone settings
     NANITE_DRONE: {
         ORBIT_RADIUS: 2,         // Distance from player
@@ -92,9 +104,7 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         FORCE: 0.5,          // Force multiplier
         COOLDOWN: 5000,      // 5 seconds in milliseconds
         EFFECT_DURATION: 500  // How long knockback effect lasts in ms
-    },
-
-    // Power-up settings
+    },    // Power-up settings
     POWER_UP: {
         SPAWN_INTERVAL: 15000,     // Try to spawn every 15 seconds
         SPAWN_CHANCE: 0.3,         // 30% chance to spawn when interval is met
@@ -102,7 +112,18 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         MIN_SPAWN_DISTANCE: 15,    // Minimum distance from player
         MAX_SPAWN_DISTANCE: 25,    // Maximum distance from player
         PICKUP_RADIUS: 2,          // How close player needs to be to pick up
-    },    
+        SUPER_NOVA_CHANCE: 0.05,   // 5% chance for Super Nova (very rare!)
+    },
+
+    // Super Nova power-up settings
+    SUPER_NOVA: {
+        EXPLOSION_RADIUS: 50,      // Massive explosion radius
+        DAMAGE: 99999,             // Enough to destroy any enemy
+        VISUAL_DURATION: 2000,     // How long the explosion effect lasts
+        SCREEN_FLASH_DURATION: 500, // Duration of screen flash effect
+        PARTICLE_COUNT: 200,       // Number of explosion particles
+        SCORE_MULTIPLIER: 2.0,     // Destroyed enemies give 2x score
+    },
     // Homing missile settings
     HOMING_MISSILE: {
         DAMAGE: 250,              // Base damage

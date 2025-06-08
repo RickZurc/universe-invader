@@ -8,6 +8,7 @@ export class StoreManager {
     private onUpgrade: (type: string, cost: number) => void;
     private piercingLevel: number = 0; // Track current piercing level
     private superBulletLevel: number = 0; // Track current super bullet level
+    private glitchedBulletLevel: number = 0; // Track current glitched bullet level
 
     constructor(uiManager: UIManager, onUpgrade: (type: string, cost: number) => void) {
         this.score = 0;
@@ -43,11 +44,19 @@ export class StoreManager {
         return this.superBulletLevel;
     }
 
+    setGlitchedBulletLevel(level: number) {
+        this.glitchedBulletLevel = level;
+        this.updateUpgradeButtons();
+    }
+
+    getGlitchedBulletLevel(): number {
+        return this.glitchedBulletLevel;
+    }
+
     private getScaledCost(baseCost: number): number {
         const scaleFactor = Math.pow(GameConfig.DIFFICULTY.UPGRADE_COST_SCALE_FACTOR, this.currentRound - 1);
         return Math.floor(baseCost * scaleFactor);
-    }    private updateUpgradeButtons() {
-        const upgrades = [
+    }    private updateUpgradeButtons() {        const upgrades = [
             { id: 'health-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.HEALTH) },
             { id: 'damage-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.DAMAGE) },
             { id: 'speed-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SPEED) },
@@ -55,6 +64,7 @@ export class StoreManager {
             { id: 'nanite-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.NANITE_DRONE) },
             { id: 'piercing-upgrade', cost: this.getPiercingUpgradeCost() },
             { id: 'super-bullet-upgrade', cost: this.getSuperBulletUpgradeCost() },
+            { id: 'glitched-bullet-upgrade', cost: this.getGlitchedBulletUpgradeCost() },
             { id: 'shield-upgrade', cost: this.getScaledCost(GameConfig.UPGRADE_COSTS.SHIELD_OVERDRIVE) }
         ];
 
@@ -68,7 +78,8 @@ export class StoreManager {
                   // Special handling for piercing upgrade - disable if max level reached
                 const isPiercingMaxLevel = id === 'piercing-upgrade' && this.piercingLevel >= GameConfig.PIERCING_BULLETS.MAX_LEVEL;
                 const isSuperBulletMaxLevel = id === 'super-bullet-upgrade' && this.superBulletLevel >= GameConfig.SUPER_BULLET.MAX_LEVEL;
-                const isMaxLevel = isPiercingMaxLevel || isSuperBulletMaxLevel;
+                const isGlitchedBulletMaxLevel = id === 'glitched-bullet-upgrade' && this.glitchedBulletLevel >= GameConfig.GLITCHED_BULLET.MAX_LEVEL;
+                const isMaxLevel = isPiercingMaxLevel || isSuperBulletMaxLevel || isGlitchedBulletMaxLevel;
                 
                 button.disabled = !canAfford || isMaxLevel;
                 if (canAfford && !isMaxLevel) {
@@ -99,6 +110,14 @@ export class StoreManager {
                     if (buttonText) {
                         const critChance = this.superBulletLevel * GameConfig.SUPER_BULLET.CRIT_CHANCE_PER_LEVEL;
                         buttonText.textContent = `Super Bullet Lv.${this.superBulletLevel} (${critChance}% Crit)`;
+                    }
+                }
+
+                // Update button text to show current level for glitched bullet
+                if (id === 'glitched-bullet-upgrade' && this.glitchedBulletLevel > 0) {
+                    const buttonText = button.querySelector('.upgrade-name') || button.childNodes[0];
+                    if (buttonText) {
+                        buttonText.textContent = `Glitched Bullet Lv.${this.glitchedBulletLevel}`;
                     }
                 }
             }
@@ -146,11 +165,15 @@ export class StoreManager {
                 id: 'piercing-upgrade',
                 type: 'piercing',
                 getCost: () => this.getPiercingUpgradeCost()
-            },
-            {
+            },            {
                 id: 'super-bullet-upgrade',
                 type: 'super-bullet',
                 getCost: () => this.getSuperBulletUpgradeCost()
+            },
+            {
+                id: 'glitched-bullet-upgrade',
+                type: 'glitched-bullet',
+                getCost: () => this.getGlitchedBulletUpgradeCost()
             },
             {
                 id: 'shield-upgrade',
@@ -200,6 +223,21 @@ export class StoreManager {
         const nextLevel = this.superBulletLevel + 1;
         const baseCost = GameConfig.SUPER_BULLET.BASE_COST;
         const multiplier = Math.pow(GameConfig.SUPER_BULLET.COST_MULTIPLIER, nextLevel - 1);
+        const levelCost = Math.floor(baseCost * multiplier);
+        
+        // Apply round scaling
+        return this.getScaledCost(levelCost);
+    }
+
+    // Calculate cost for glitched bullet upgrade based on current level
+    private getGlitchedBulletUpgradeCost(): number {
+        if (this.glitchedBulletLevel >= GameConfig.GLITCHED_BULLET.MAX_LEVEL) {
+            return Infinity; // Max level reached
+        }
+        
+        const nextLevel = this.glitchedBulletLevel + 1;
+        const baseCost = GameConfig.GLITCHED_BULLET.BASE_COST;
+        const multiplier = Math.pow(GameConfig.GLITCHED_BULLET.COST_MULTIPLIER, nextLevel - 1);
         const levelCost = Math.floor(baseCost * multiplier);
         
         // Apply round scaling

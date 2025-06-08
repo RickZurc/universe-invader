@@ -115,10 +115,10 @@ class Game {
                 const damageInput = document.getElementById('debug-damage') as HTMLInputElement;
                 const speedInput = document.getElementById('debug-speed') as HTMLInputElement;
                 const fireRateInput = document.getElementById('debug-firerate') as HTMLInputElement;
-                const scoreInput = document.getElementById('debug-score') as HTMLInputElement;
-                const missilesInput = document.getElementById('debug-missiles') as HTMLInputElement;
+                const scoreInput = document.getElementById('debug-score') as HTMLInputElement;                const missilesInput = document.getElementById('debug-missiles') as HTMLInputElement;
                 const dronesInput = document.getElementById('debug-drones') as HTMLInputElement;
                 const superBulletInput = document.getElementById('debug-super-bullet') as HTMLInputElement;
+                const glitchedBulletInput = document.getElementById('debug-glitched-bullet') as HTMLInputElement;
 
                 let changes: string[] = [];
 
@@ -178,12 +178,16 @@ class Game {
                         }
                     }
                     changes.push('Drones');
-                }
-
-                if (superBulletInput && !isNaN(parseInt(superBulletInput.value))) {
+                }                if (superBulletInput && !isNaN(parseInt(superBulletInput.value))) {
                     const level = Math.max(0, Math.min(10, parseInt(superBulletInput.value)));
                     this.bulletManager.setSuperBulletLevel(level);
                     changes.push('Super Bullet Level');
+                }
+
+                if (glitchedBulletInput && !isNaN(parseInt(glitchedBulletInput.value))) {
+                    const level = Math.max(0, Math.min(5, parseInt(glitchedBulletInput.value)));
+                    this.bulletManager.setGlitchedBulletLevel(level);
+                    changes.push('Glitched Bullet Level');
                 }
 
                 // Update UI to reflect all changes
@@ -201,6 +205,17 @@ class Game {
 
         document.getElementById('debug-resume')?.addEventListener('click', () => this.closeDebugMenu());
 
+        document.getElementById('debug-super-nova')?.addEventListener('click', () => {
+            if (!this.isDebugMode) return;
+            try {
+                this.triggerSuperNova();
+                this.showDebugFeedback('Super Nova triggered!');
+            } catch (error) {
+                this.showDebugFeedback('Failed to trigger Super Nova', true);
+                console.error(error);
+            }
+        });
+
         document.addEventListener('keydown', (event) => {
             if (event.key.toLowerCase() === 'j') {
                 if (!this.isDebugMode) {
@@ -209,8 +224,7 @@ class Game {
                     this.closeDebugMenu();
                 }
             } else if (event.key.toLowerCase() === 's' && event.ctrlKey) {
-                event.preventDefault();
-                const gameState: GameState = {
+                event.preventDefault();                const gameState: GameState = {
                     score: this.score,
                     playerHealth: this.playerManager.getHealth(),
                     maxHealth: this.playerManager.getMaxHealth(),
@@ -220,7 +234,8 @@ class Game {
                     hasShieldOverdrive: this.hasShieldOverdrive,
                     lastShieldTime: this.lastShieldTime,
                     piercingLevel: this.bulletManager.getPiercingLevel(),
-                    superBulletLevel: this.bulletManager.getSuperBulletLevel()
+                    superBulletLevel: this.bulletManager.getSuperBulletLevel(),
+                    glitchedBulletLevel: this.bulletManager.getGlitchedBulletLevel()
                 };
                 
                 if (this.gameManager.saveGame(gameState)) {
@@ -282,11 +297,15 @@ class Game {
         if (state.piercingLevel !== undefined) {
             this.bulletManager.setPiercingLevel(state.piercingLevel);
             this.storeManager.setPiercingLevel(state.piercingLevel);
-        }
-
-        // Load super bullet level if available
+        }        // Load super bullet level if available
         if (state.superBulletLevel !== undefined) {
             this.bulletManager.setSuperBulletLevel(state.superBulletLevel);
+        }
+
+        // Load glitched bullet level if available
+        if (state.glitchedBulletLevel !== undefined) {
+            this.bulletManager.setGlitchedBulletLevel(state.glitchedBulletLevel);
+            this.storeManager.setGlitchedBulletLevel(state.glitchedBulletLevel);
         }
 
         // Show shield UI if unlocked
@@ -324,11 +343,20 @@ class Game {
                 break;
             case 'nanite':
                 this.naniteDroneManager.addDrone();
-                break;
-            case 'piercing':
+                break;            case 'piercing':
                 const currentLevel = this.bulletManager.getPiercingLevel();
                 this.bulletManager.setPiercingLevel(currentLevel + 1);
                 this.storeManager.setPiercingLevel(currentLevel + 1);
+                break;
+            case 'super-bullet':
+                const currentSuperLevel = this.bulletManager.getSuperBulletLevel();
+                this.bulletManager.setSuperBulletLevel(currentSuperLevel + 1);
+                this.storeManager.setSuperBulletLevel(currentSuperLevel + 1);
+                break;
+            case 'glitched-bullet':
+                const currentGlitchedLevel = this.bulletManager.getGlitchedBulletLevel();
+                this.bulletManager.setGlitchedBulletLevel(currentGlitchedLevel + 1);
+                this.storeManager.setGlitchedBulletLevel(currentGlitchedLevel + 1);
                 break;
             case 'shield':
                 this.hasShieldOverdrive = true;
@@ -376,8 +404,7 @@ class Game {
     }
 
     private openDebugMenu() {
-        this.isDebugMode = true;
-        this.uiManager.openDebugMenu(
+        this.isDebugMode = true;        this.uiManager.openDebugMenu(
             this.playerManager.getHealth(),
             this.bulletManager.getBulletDamage(),
             this.playerManager.getMoveSpeed(),
@@ -385,7 +412,8 @@ class Game {
             this.score,
             this.homingMissiles,
             this.naniteDroneManager.getDroneCount(),
-            this.bulletManager.getSuperBulletLevel()
+            this.bulletManager.getSuperBulletLevel(),
+            this.bulletManager.getGlitchedBulletLevel()
         );
     }
 
@@ -412,10 +440,10 @@ class Game {
         // Reset player stats to initial values
         this.playerManager.setHealth(GameConfig.INITIAL_HEALTH);
         this.playerManager.setMaxHealth(GameConfig.INITIAL_MAX_HEALTH);
-        this.playerManager.setMoveSpeed(GameConfig.INITIAL_MOVE_SPEED);
-        this.bulletManager.setBulletDamage(GameConfig.INITIAL_BULLET_DAMAGE);
+        this.playerManager.setMoveSpeed(GameConfig.INITIAL_MOVE_SPEED);        this.bulletManager.setBulletDamage(GameConfig.INITIAL_BULLET_DAMAGE);
         this.bulletManager.setPiercingLevel(0);
         this.bulletManager.setSuperBulletLevel(0);
+        this.bulletManager.setGlitchedBulletLevel(0);
         this.playerManager.deactivateShieldOverdrive();
 
         // Reset game state
@@ -426,12 +454,12 @@ class Game {
         this.empBombManager.clear();
         this.naniteDroneManager.clear();
         this.uiManager.closeGameOver();
-        this.uiManager.hideShieldOverdriveUI();
-
-        // Reset store state
+        this.uiManager.hideShieldOverdriveUI();        // Reset store state
         this.storeManager.setRound(this.currentRound);
         this.storeManager.setScore(this.score);
         this.storeManager.setPiercingLevel(0);
+        this.storeManager.setSuperBulletLevel(0);
+        this.storeManager.setGlitchedBulletLevel(0);
 
         this.updateUI();
         this.enemyManager.createEnemyWave();
@@ -440,14 +468,14 @@ class Game {
     private handleCollisions() {
         const bullets = this.bulletManager.getBullets();
         const enemies = this.enemyManager.getEnemies() as Enemy[];
-        const playerPosition = this.playerManager.getShip().position;
-
-        // Check power-up collisions
+        const playerPosition = this.playerManager.getShip().position;        // Check power-up collisions
         const pickedUpType = this.powerUpManager.checkCollisions();
         if (pickedUpType !== null) {
             if (pickedUpType === PowerUpType.HOMING_MISSILE) {
                 this.homingMissiles += 3;
                 this.updateUI();
+            } else if (pickedUpType === PowerUpType.SUPER_NOVA) {
+                this.triggerSuperNova();
             }
         }
 
@@ -502,11 +530,18 @@ class Game {
                     const damage = this.bulletManager.getBulletDamageForBullet(bullet);
                     enemy.health = Math.max(0, enemy.health - damage);
                     enemy.startHitEffect();
-                    enemy.updateHealthBar(this.sceneManager.getCamera());
-
-                    // Show damage popup that follows the enemy
+                    enemy.updateHealthBar(this.sceneManager.getCamera());                    // Show damage popup that follows the enemy
                     DamagePopup.show(damage, enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), 
                         this.sceneManager.getCamera(), { followTarget: enemy });
+
+                    // Create glitched bullets if feature is enabled (only for non-glitched bullets to prevent recursion)
+                    if (this.bulletManager.getGlitchedBulletLevel() > 0 && !bullet.userData.isGlitched) {
+                        this.bulletManager.createGlitchedBullets(
+                            enemy.position.clone(),
+                            this.enemyManager.getEnemies() as Enemy[],
+                            enemy
+                        );
+                    }
 
                     // Handle bullet piercing logic
                     const shouldRemoveBullet = this.bulletManager.handleBulletHit(bullet, enemy);
@@ -524,9 +559,7 @@ class Game {
                         } else if (enemy instanceof SpecialEnemy) {
                             explosionColor = 0x00ffff;
                             scoreValue = Math.floor(200 * roundScoreMultiplier);
-                        }
-
-                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
+                        }                        ParticleSystem.createExplosion(this.sceneManager.getScene(), enemy.position.clone(), explosionColor);
                         this.enemyManager.removeEnemy(enemy);
                         this.score += scoreValue;
                         this.updateUI();
@@ -540,6 +573,53 @@ class Game {
                 }
             }
         }
+    }    private triggerSuperNova() {
+        // Get all enemies on screen - create a copy to avoid modification issues
+        const enemies = [...this.enemyManager.getEnemies()];
+        const playerPosition = this.playerManager.getShip().position;
+        
+        // Calculate total score from destroyed enemies
+        let totalScore = 0;
+        const { SCORE_SCALE_FACTOR } = GameConfig.DIFFICULTY;
+        const roundScoreMultiplier = Math.pow(SCORE_SCALE_FACTOR, this.currentRound - 1);
+        
+        // Destroy all enemies and calculate score
+        for (const enemy of enemies) {
+            // Make sure this is actually an Enemy object
+            if (!(enemy instanceof Enemy)) continue;
+            
+            let scoreValue = Math.floor(75 * roundScoreMultiplier);
+            
+            if (enemy instanceof BossEnemy) {
+                scoreValue = Math.floor(400 * roundScoreMultiplier);
+            } else if (enemy instanceof SpecialEnemy) {
+                scoreValue = Math.floor(200 * roundScoreMultiplier);
+            }
+            
+            // Apply Super Nova score multiplier
+            totalScore += Math.floor(scoreValue * GameConfig.SUPER_NOVA.SCORE_MULTIPLIER);
+            
+            // Create individual explosion for each enemy
+            ParticleSystem.createExplosion(
+                this.sceneManager.getScene(), 
+                enemy.position.clone(), 
+                0xffaa00
+            );
+            
+            this.enemyManager.removeEnemy(enemy);
+        }
+        
+        // Add score
+        this.score += totalScore;
+          // Create massive explosion effect at player position
+        this.powerUpManager.createSuperNovaExplosion(playerPosition.clone());
+        
+        // Screen flash effect
+        this.uiManager.createScreenFlash();
+        
+        console.log(`🌟 SUPER NOVA! Destroyed ${enemies.length} enemies for ${totalScore} points!`);
+        
+        this.updateUI();
     }
 
     public animate() {

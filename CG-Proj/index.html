@@ -103,6 +103,9 @@
       <button class="upgrade-button" id="super-bullet-upgrade">
         Upgrade Super Bullet - Critical Hit Chance (Cost: <span class="upgrade-cost">-</span>)
       </button>
+      <button class="upgrade-button" id="glitched-bullet-upgrade">
+        Upgrade Glitched Bullet - Auto-Targeting Split Bullets (Cost: <span class="upgrade-cost">-</span>)
+      </button>
       <button class="upgrade-button" id="shield-upgrade">
         Unlock Shield Overdrive - Temporary Invincibility (Cost: <span class="upgrade-cost">-</span>)
       </button>
@@ -147,9 +150,14 @@
             <label>Super Bullet Level:</label>
             <input type="number" id="debug-super-bullet" class="debug-input" min="0" max="10">
         </div>
+        <div>
+            <label>Glitched Bullet Level:</label>
+            <input type="number" id="debug-glitched-bullet" class="debug-input" min="0" max="5">
+        </div>
         <button class="debug-button" id="debug-spawn-enemy">Spawn Normal Enemy</button>
         <button class="debug-button" id="debug-spawn-boss">Spawn Boss</button>
         <button class="debug-button" id="debug-unlock-shield">Toggle Shield Overdrive</button>
+        <button class="debug-button" id="debug-super-nova">Trigger Super Nova</button>
         <button class="debug-button" id="debug-apply">Apply Changes</button>
         <button class="debug-button" id="debug-resume">Resume Game</button>
         <div id="debug-feedback" class="debug-feedback"></div>

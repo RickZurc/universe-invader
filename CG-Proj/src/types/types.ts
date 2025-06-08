@@ -17,4 +17,5 @@ export interface GameState {
     lastShieldTime: number;
     piercingLevel: number;
     superBulletLevel: number;
+    glitchedBulletLevel: number;
 }

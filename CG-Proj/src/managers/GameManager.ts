@@ -39,7 +39,8 @@ export class GameManager {
                     hasShieldOverdrive: parsed.hasShieldOverdrive || false,
                     lastShieldTime: parsed.lastShieldTime || 0,
                     piercingLevel: parsed.piercingLevel || 0,
-                    superBulletLevel: parsed.superBulletLevel || 0
+                    superBulletLevel: parsed.superBulletLevel || 0,
+                    glitchedBulletLevel: parsed.glitchedBulletLevel || 0
                 };
             }
         } catch (error) {
