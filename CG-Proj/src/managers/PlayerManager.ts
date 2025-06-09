@@ -59,13 +59,13 @@ export class PlayerManager {
         });
         const tempShip = new THREE.Mesh(tempGeometry, tempMaterial);
         this.playerShip.add(tempShip);
-    }
-
-    private loadPlayerModel() {
+    }    private loadPlayerModel() {
         const loader = new GLTFLoader();
+        console.log('Attempting to load player model...');
         loader.load(
-            '/src/SpaceshipPlayer.glb',
+            '/SpaceshipPlayer.glb',
             (gltf) => {
+                console.log('Player model loaded successfully:', gltf);
                 // Remove temporary ship
                 this.playerShip.remove(this.playerShip.children[0]);
                 
@@ -75,15 +75,18 @@ export class PlayerManager {
                 model.rotation.set(90, Math.PI, 0);
                 
                 this.playerShip.add(model);
+                console.log('Player model added to scene');
                 
                 // Reposition thrusters for new model
                 if (this.thrusterParticles) {
                     this.thrusterParticles.position.y = -1.5;
                 }
             },
-            undefined,
+            (progress) => {
+                console.log('Player model loading progress:', progress);
+            },
             (error) => {
-                console.error('An error occurred loading the model:', error);
+                console.error('An error occurred loading the player model:', error);
             }
         );
     }

@@ -89,20 +89,30 @@ export class EnemyManager {    private scene: THREE.Scene;
             // Determine enemy type based on probabilities
             const specialChance = this.calculateSpecialEnemyChance();
             const shifterChance = this.calculateShifterEnemyChance();
-            const destroyerChance = this.calculateDestroyerEnemyChance();
+            const destroyerChance = this.calculateDestroyerEnemyChance();            // Temporarily force all enemies to be normal enemies for testing
+            enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
+            console.log('Created NormalEnemy - should load model (FORCED FOR TESTING)');
+            
+            // Original probability-based code commented out for testing:
+            /*
             const rand = Math.random();
               if (rand < shifterChance) {
                 // Shifter enemies have low health but teleportation abilities
                 enemy = new ShifterEnemy(enemyGeometry, null!, Math.floor(baseHealth * 0.4));
+                console.log('Created ShifterEnemy');
             } else if (rand < shifterChance + destroyerChance) {
                 // Destroyer enemies have medium health and fire missiles
                 enemy = new DestroyerEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.2));
+                console.log('Created DestroyerEnemy');
             } else if (rand < shifterChance + destroyerChance + specialChance) {
                 // Special enemies have 50% more health than normal enemies
                 enemy = new SpecialEnemy(enemyGeometry, null!, Math.floor(baseHealth * 1.5));
+                console.log('Created SpecialEnemy');
             } else {
                 enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
+                console.log('Created NormalEnemy - should load model');
             }
+            */
         }
         
         // Position and add enemy

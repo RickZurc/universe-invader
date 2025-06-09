@@ -1,15 +1,78 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Enemy } from './Enemy';
 import { EnemyType } from '../types/types';
 import { GameConfig } from '../config/GameConfig';
 
 export class NormalEnemy extends Enemy {
     constructor(geometry: THREE.BoxGeometry, _material: THREE.MeshBasicMaterial, baseHealth: number) {
-        super(geometry, new THREE.MeshBasicMaterial({ color: 'red' }), baseHealth);
+        console.log('NormalEnemy constructor called');
+        super(geometry, new THREE.MeshBasicMaterial(), baseHealth);
         this.scale.set(1, 1, 1);
         this.healthContainer.style.width = '40px';
         this.healthContainer.style.height = '4px';
         this.healthContainer.style.transform = 'scale(1)';
+        
+        console.log('About to load normal enemy model');
+        // Load the spaceship model
+        this.loadNormalEnemyModel();
+    }    private loadNormalEnemyModel() {
+        const loader = new GLTFLoader();
+        console.log('Attempting to load normal enemy model from:', '/SpaceshipNormalEnemy.glb');
+        
+        loader.load(
+            '/SpaceshipNormalEnemy.glb',
+            (gltf) => {
+                console.log('Normal enemy model loaded successfully:', gltf);
+                console.log('Model scene:', gltf.scene);
+                console.log('Model children:', gltf.scene.children);
+                
+                // Add the loaded model as a child
+                const model = gltf.scene.clone(); // Clone to avoid issues
+                model.scale.set(0.6, 0.6, 0.6);
+                model.rotation.set(90, Math.PI, 0);
+                
+                
+                // Apply red coloring to the model materials
+                model.traverse((child) => {
+                    if (child instanceof THREE.Mesh && child.material) {
+                        console.log('Found mesh in model:', child.name || 'unnamed', child.material);
+                        const material = child.material;
+                        if (Array.isArray(material)) {
+                            material.forEach(mat => {
+                                if (mat instanceof THREE.MeshStandardMaterial || mat instanceof THREE.MeshPhongMaterial) {
+                                    // mat.color.setHex(0xff0000); // Red color for normal enemies
+                                    mat.emissive.setHex(0x220000); // Dark red emissive
+                                    console.log('Applied red color to material');
+                                }
+                            });
+                        } else if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial) {
+                            // material.color.setHex(0xff0000); // Red color for normal enemies
+                            material.emissive.setHex(0x220000); // Dark red emissive
+                            console.log('Applied red color to single material');
+                        }
+                    }
+                });
+                
+                // Add the model as a child (don't replace the base geometry, just add on top)
+                this.add(model);
+                console.log('Normal enemy model added to scene. Enemy children count:', this.children.length);
+                
+                // Hide the original box geometry by making it transparent
+                if (this.material instanceof THREE.Material) {
+                    this.material.transparent = true;
+                    this.material.opacity = 0;
+                }
+            },
+            (progress) => {
+                console.log('Loading progress:', progress.loaded, '/', progress.total);
+            },
+            (error) => {
+                console.error('An error occurred loading the normal enemy model:', error);
+                console.error('Error details:', error);
+                // Keep the original box geometry if model fails to load
+            }
+        );
     }
 }
 

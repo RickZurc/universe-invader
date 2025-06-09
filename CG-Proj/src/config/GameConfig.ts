@@ -49,7 +49,8 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         COLOR: 0x4444ff,        // Blue shield color
         OPACITY: 0.3,           // Shield transparency
         KEY: 'F',               // Key to activate ability
-    },    // Store costs - base costs before round scaling
+    },   
+    // Store costs - base costs before round scaling
     UPGRADE_COSTS: {
         HEALTH: 600,    // Significant investment for survivability
         DAMAGE: 500,    // Higher cost for offensive power
@@ -60,14 +61,16 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         PIERCING_BULLETS: 1200, // Expensive piercing upgrade - starts high and scales up
         SUPER_BULLET: 800, // Super Bullet critical hit upgrade
         GLITCHED_BULLET: 1200 // Glitched Bullet upgrade - very expensive
-    },// Piercing Bullets settings
+    },
+    // Piercing Bullets settings
     PIERCING_BULLETS: {
         BASE_COST: 1200,         // Base cost for first level
         COST_MULTIPLIER: 1.8,    // Cost multiplier per level (expensive scaling)
         MAX_LEVEL: 5,            // Maximum piercing level
         PENETRATION_PER_LEVEL: 1, // Each level adds 1 more enemy penetration
         BASE_PENETRATION: 1,     // Level 1 = 2 enemies, Level 2 = 3 enemies, etc.
-    },    // Super Bullet (Critical Hit) settings
+    },    
+    // Super Bullet (Critical Hit) settings
     SUPER_BULLET: {
         BASE_COST: 800,          // Base cost for first level
         COST_MULTIPLIER: 1.5,    // Cost multiplier per level
@@ -104,7 +107,8 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         FORCE: 0.5,          // Force multiplier
         COOLDOWN: 5000,      // 5 seconds in milliseconds
         EFFECT_DURATION: 500  // How long knockback effect lasts in ms
-    },    // Power-up settings
+    },    
+    // Power-up settings
     POWER_UP: {
         SPAWN_INTERVAL: 15000,     // Try to spawn every 15 seconds
         SPAWN_CHANCE: 0.3,         // 30% chance to spawn when interval is met
