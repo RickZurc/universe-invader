@@ -828,12 +828,17 @@ class Game {
                 if (deployed) {
                     this.lastEMPTime = Date.now();
                 }
-            }
-
-            // Update game objects
+            }            // Update game objects
             this.bulletManager.updateBullets();
             this.enemyManager.updateEnemies(this.sceneManager.getCamera());
             this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);
+
+            // Update enemy indicators when 10 or fewer enemies remain
+            this.uiManager.updateEnemyIndicators(
+                this.enemyManager.getEnemies() as Enemy[],
+                this.sceneManager.getCamera(),
+                this.playerManager.getShip().position
+            );
 
             // Check round completion
             const activeEnemies = this.enemyManager.getEnemies().length;

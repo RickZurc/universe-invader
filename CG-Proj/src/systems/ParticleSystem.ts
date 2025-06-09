@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export class ParticleSystem {
     static createExplosion(scene: THREE.Scene, position: THREE.Vector3, color: number) {
-        const particleCount = 50;
+        const particleCount = 20; // Reduced from 50 to 20
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities: THREE.Vector3[] = [];
@@ -21,10 +21,9 @@ export class ParticleSystem {
         }
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        
-        const material = new THREE.PointsMaterial({
+          const material = new THREE.PointsMaterial({
             color: color,
-            size: 0.2,
+            size: 0.15, // Slightly smaller particles
             blending: THREE.AdditiveBlending,
             transparent: true,
             opacity: 1
@@ -35,11 +34,12 @@ export class ParticleSystem {
         
         // Animation variables
         let life = 1.0;
-        const decay = 0.05;
-        
-        function animateExplosion() {
+        const decay = 0.08; // Faster decay for quicker cleanup
+          function animateExplosion() {
             if (life <= 0) {
                 scene.remove(particles);
+                geometry.dispose();
+                material.dispose();
                 return;
             }
             
@@ -65,15 +65,13 @@ export class ParticleSystem {
         }
         
         animateExplosion();
-    }
-
-    static createThrusterParticles(): THREE.Points {
+    }    static createThrusterParticles(): THREE.Points {
         const thrusterGeometry = new THREE.BufferGeometry();
-        const thrusterVertices = new Float32Array(300); // 100 particles * 3 coordinates
-        const thrusterColors = new Float32Array(300); // 100 particles * 3 color values
+        const thrusterVertices = new Float32Array(150); // Reduced from 300 to 150 (50 particles)
+        const thrusterColors = new Float32Array(150); // Reduced from 300 to 150
 
         // Initialize particles with random positions
-        for (let i = 0; i < 300; i += 3) {
+        for (let i = 0; i < 150; i += 3) {
             thrusterVertices[i] = 0;
             thrusterVertices[i + 1] = 0;
             thrusterVertices[i + 2] = 0;
@@ -85,14 +83,12 @@ export class ParticleSystem {
         }
 
         thrusterGeometry.setAttribute('position', new THREE.BufferAttribute(thrusterVertices, 3));
-        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));
-
-        const thrusterMaterial = new THREE.PointsMaterial({
-            size: 0.1,
+        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));        const thrusterMaterial = new THREE.PointsMaterial({
+            size: 0.08, // Smaller thruster particles
             vertexColors: true,
             blending: THREE.AdditiveBlending,
             transparent: true,
-            opacity: 0.8
+            opacity: 0.6 // Reduced opacity
         });
 
         return new THREE.Points(thrusterGeometry, thrusterMaterial);
@@ -139,14 +135,11 @@ export class ParticleSystem {
         }
 
         thrusterParticles.geometry.attributes.position.needsUpdate = true;
-        
-        // Thrusters are always visible but with varying intensity
-        material.opacity = 0.7;
-        material.size = 0.12;
-    }
-
-    static createWaveEffect(scene: THREE.Scene, position: THREE.Vector3, color: number, radius: number) {
-        const particleCount = 200; // More particles for a denser wave
+          // Thrusters are always visible but with varying intensity
+        material.opacity = 0.5; // Reduced opacity
+        material.size = 0.08; // Smaller size
+    }    static createWaveEffect(scene: THREE.Scene, position: THREE.Vector3, color: number, radius: number) {
+        const particleCount = 80; // Reduced from 200 to 80
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities: THREE.Vector3[] = [];

@@ -1,4 +1,5 @@
 import { GameConfig } from '../config/GameConfig';
+import { EnemyIndicators } from '../utils/EnemyIndicators';
 
 export class UIManager {
     private scoreElement: HTMLElement;
@@ -14,10 +15,10 @@ export class UIManager {
     private empTimer: HTMLElement;
     private empReady: HTMLElement;    private shieldTimer: HTMLElement;
     private shieldReady: HTMLElement;
-    private shieldContainer: HTMLElement;
-    private shieldControlItem: HTMLElement;
+    private shieldContainer: HTMLElement;    private shieldControlItem: HTMLElement;
     private missileCountElement: HTMLElement;
     private empCountElement: HTMLElement;
+    private enemyIndicators: EnemyIndicators;
 
     constructor() {
         this.scoreElement = document.getElementById('score')!;
@@ -67,10 +68,13 @@ export class UIManager {
         this.empCountElement.style.color = '#00ffff';
         this.empCountElement.style.fontFamily = 'Arial, sans-serif';
         this.empCountElement.style.fontSize = '18px';
-        this.empCountElement.style.textShadow = '0 0 5px #00ffff';
+        this.empCountElement.style.textShadow = '0 0 5px #00ffff';        
         document.body.appendChild(this.empCountElement);
 
         this.updateMissileCount(0);
+        
+        // Initialize enemy indicators
+        this.enemyIndicators = new EnemyIndicators();
     }
 
     updateScore(score: number) {
@@ -330,7 +334,14 @@ export class UIManager {
                 feedbackDiv.textContent = '';
                 feedbackDiv.className = 'debug-feedback';
             }, 3000);
-        }
+        }    }
+
+    /**
+     * Update enemy position indicators
+     * Shows arrows at screen edges pointing to enemies when there are 10 or fewer
+     */
+    updateEnemyIndicators(enemies: any[], camera: any, playerPosition: any): void {
+        this.enemyIndicators.updateIndicators(enemies, camera, playerPosition);
     }
 
     // Create screen flash effect for Super Nova

@@ -1,6 +1,14 @@
 import * as THREE from 'three';
 import { GameConfig } from '../config/GameConfig';
 
+interface BulletPool {
+    geometry: THREE.CylinderGeometry;
+    normalMaterial: THREE.MeshPhongMaterial;
+    criticalMaterial: THREE.MeshPhongMaterial;
+    glitchedMaterial: THREE.MeshPhongMaterial;
+    light: THREE.PointLight;
+}
+
 export class BulletManager {
     private scene: THREE.Scene;
     private playerShip: THREE.Group;
@@ -9,38 +17,81 @@ export class BulletManager {
     private piercingLevel: number = 0; // Level 0 = no piercing, Level 1+ = piercing
     private superBulletLevel: number = 0; // Level 0 = no critical hits, Level 1+ = critical hits
     private glitchedBulletLevel: number = 0; // Level 0 = no glitched bullets, Level 1+ = glitched bullets
+      // Object pooling for performance
+    private bulletPool!: BulletPool;
+    private maxBullets: number = 75; // Limit total bullets to prevent performance issues
+    private sharedLight!: THREE.PointLight; // Single shared light instead of per-bullet lights
 
     constructor(scene: THREE.Scene, playerShip: THREE.Group) {
         this.scene = scene;
         this.playerShip = playerShip;
         this.bulletDamage = GameConfig.INITIAL_BULLET_DAMAGE;
+        this.initializeBulletPool();
+        this.initializeSharedLight();
+    }
+
+    private initializeBulletPool() {
+        // Create reusable geometry and materials
+        this.bulletPool = {
+            geometry: new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8),
+            normalMaterial: new THREE.MeshPhongMaterial({ 
+                color: 0x00ffff,
+                emissive: 0x004444,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.9
+            }),
+            criticalMaterial: new THREE.MeshPhongMaterial({ 
+                color: 0xffaa00,
+                emissive: 0x664400,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.9
+            }),
+            glitchedMaterial: new THREE.MeshPhongMaterial({ 
+                color: 0xaa00aa,
+                emissive: 0x440044,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.8
+            }),
+            light: new THREE.PointLight(0x00ffff, 0.8, 4)
+        };
+    }    private initializeSharedLight() {
+        // Create a single shared light that follows bullets instead of per-bullet lights
+        this.sharedLight = new THREE.PointLight(0x00ffff, 1.5, 8);
+        this.sharedLight.position.set(0, 0, 0.5);
+        this.scene.add(this.sharedLight);
+    }
+
+    private updateSharedLight() {
+        // Update shared light to follow the player's position for better lighting
+        if (this.bullets.length > 0) {
+            // Position light near the player where bullets are being fired
+            this.sharedLight.position.copy(this.playerShip.position);
+            this.sharedLight.position.z = 0.5;
+        }
     }shoot(mouseWorldPosition: THREE.Vector3) {
+        // Performance check: limit total bullet count
+        if (this.bullets.length >= this.maxBullets) {
+            return; // Don't create more bullets if at limit
+        }
+
         // Determine if this is a critical hit
         const critChance = this.superBulletLevel * GameConfig.SUPER_BULLET.CRIT_CHANCE_PER_LEVEL;
         const isCritical = Math.random() * 100 < critChance;
         
-        // Create laser-like bullet using cylinder geometry
-        const baseSize = isCritical ? 0.07 * GameConfig.SUPER_BULLET.VISUAL_SCALE : 0.05;
-        const bulletLength = isCritical ? 1.2 * GameConfig.SUPER_BULLET.VISUAL_SCALE : 1.0;
-        const bulletGeometry = new THREE.CylinderGeometry(baseSize, baseSize, bulletLength, 8);
+        // Use pooled geometry and material instead of creating new ones
+        const material = isCritical ? this.bulletPool.criticalMaterial : this.bulletPool.normalMaterial;
+        const bullet = new THREE.Mesh(this.bulletPool.geometry, material);
         
-        // Different colors for critical vs normal bullets
-        const bulletColor = isCritical ? 0xffaa00 : 0x00ffff; // Orange for critical, cyan for normal
-        const emissiveColor = isCritical ? 0x664400 : 0x004444;
+        // Scale for critical bullets
+        if (isCritical) {
+            const scale = GameConfig.SUPER_BULLET.VISUAL_SCALE;
+            bullet.scale.set(scale, scale, scale);
+        }
         
-        const bulletMaterial = new THREE.MeshPhongMaterial({ 
-            color: bulletColor,
-            emissive: emissiveColor,
-            shininess: 100,
-            transparent: true,
-            opacity: 0.9
-        });
-        const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
-        
-        // Add point light to bullet with appropriate intensity and color
-        const lightIntensity = isCritical ? 1.2 * GameConfig.SUPER_BULLET.LIGHT_INTENSITY : 0.8;
-        const bulletLight = new THREE.PointLight(bulletColor, lightIntensity, 4);
-        bullet.add(bulletLight);
+        // Position calculation
         const offset = 1;
         bullet.position.set(
             this.playerShip.position.x + Math.cos(this.playerShip.rotation.z + Math.PI/2) * offset,
@@ -58,7 +109,9 @@ export class BulletManager {
         // Orient the cylinder to point in the direction of travel
         const angle = Math.atan2(dy, dx);
         bullet.rotation.z = angle - Math.PI/2; // Adjust for cylinder's default orientation
-          bullet.userData.directionX = normalizedDx;
+        
+        // Set bullet data
+        bullet.userData.directionX = normalizedDx;
         bullet.userData.directionY = normalizedDy;
         bullet.userData.piercingLeft = this.piercingLevel > 0 ? 
             GameConfig.PIERCING_BULLETS.BASE_PENETRATION + (this.piercingLevel - 1) * GameConfig.PIERCING_BULLETS.PENETRATION_PER_LEVEL : 0;
@@ -67,6 +120,9 @@ export class BulletManager {
         
         this.bullets.push(bullet);
         this.scene.add(bullet);
+        
+        // Update shared light position to follow the most recent bullet
+        this.updateSharedLight();
     }    updateBullets() {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
@@ -84,21 +140,33 @@ export class BulletManager {
             }
             
             if (bullet.position.distanceTo(this.playerShip.position) > 30) {
-                this.scene.remove(bullet);
-                this.bullets.splice(i, 1);
+                this.removeBulletAtIndex(i);
             }
+        }
+        
+        // Update shared light position
+        this.updateSharedLight();
+    }
+
+    private removeBulletAtIndex(index: number) {
+        if (index >= 0 && index < this.bullets.length) {
+            const bullet = this.bullets[index];
+            
+            // Reset scale for reuse
+            bullet.scale.set(1, 1, 1);
+            
+            // Remove from scene and array
+            this.scene.remove(bullet);
+            this.bullets.splice(index, 1);
         }
     }
 
     getBullets() {
         return this.bullets;
-    }
-
-    removeBullet(bullet: THREE.Mesh) {
+    }    removeBullet(bullet: THREE.Mesh) {
         const index = this.bullets.indexOf(bullet);
         if (index > -1) {
-            this.scene.remove(bullet);
-            this.bullets.splice(index, 1);
+            this.removeBulletAtIndex(index);
         }
     }
 
@@ -173,13 +241,14 @@ export class BulletManager {
     createGlitchedBullets(fromPosition: THREE.Vector3, enemies: any[], excludeEnemy?: any) {
         if (this.glitchedBulletLevel === 0 || enemies.length === 0) return;
 
-        // Performance safeguard: limit total bullets
+        // Performance safeguard: limit total bullets (reduced from 50 to align with maxBullets)
         const currentBulletCount = this.bullets.length;
-        if (currentBulletCount > 50) return; // Prevent too many bullets
+        if (currentBulletCount >= this.maxBullets - 5) return; // Leave some room for regular bullets
 
         const numBullets = Math.min(
             this.glitchedBulletLevel * GameConfig.GLITCHED_BULLET.BULLETS_PER_LEVEL,
-            enemies.length - (excludeEnemy ? 1 : 0) // Don't create more bullets than available targets
+            enemies.length - (excludeEnemy ? 1 : 0), // Don't create more bullets than available targets
+            this.maxBullets - currentBulletCount // Don't exceed bullet limit
         );
         
         for (let i = 0; i < numBullets; i++) {
@@ -205,24 +274,13 @@ export class BulletManager {
                 this.createGlitchedBullet(fromPosition, closestEnemy.position);
             }
         }
-    }
-
-    // Create a single glitched bullet
+    }    // Create a single glitched bullet
     private createGlitchedBullet(fromPosition: THREE.Vector3, targetPosition: THREE.Vector3) {
-        // Create glitched bullet with unique visual style
-        const bulletGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.8, 6); // Hexagonal for "glitched" look
-        const bulletMaterial = new THREE.MeshPhongMaterial({ 
-            color: GameConfig.GLITCHED_BULLET.VISUAL_COLOR,
-            emissive: 0x440044,
-            shininess: 100,
-            transparent: true,
-            opacity: 0.8
-        });
-        const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+        // Use pooled geometry and material for glitched bullets
+        const bullet = new THREE.Mesh(this.bulletPool.geometry, this.bulletPool.glitchedMaterial);
         
-        // Add pulsing light effect
-        const bulletLight = new THREE.PointLight(GameConfig.GLITCHED_BULLET.VISUAL_COLOR, 0.6, 3);
-        bullet.add(bulletLight);
+        // Scale down slightly for glitched bullets visual difference
+        bullet.scale.set(0.8, 0.8, 0.8);
         
         // Position the bullet
         bullet.position.copy(fromPosition);
@@ -232,7 +290,8 @@ export class BulletManager {
             .copy(targetPosition)
             .sub(fromPosition)
             .normalize();
-          // Store bullet data - glitched bullets don't pierce and don't trigger more glitched bullets
+        
+        // Store bullet data - glitched bullets don't pierce and don't trigger more glitched bullets
         bullet.userData = {
             direction: direction,
             speed: GameConfig.BULLET_SPEED * GameConfig.GLITCHED_BULLET.SPEED_MULTIPLIER,
@@ -244,5 +303,27 @@ export class BulletManager {
         
         this.bullets.push(bullet);
         this.scene.add(bullet);
+    }
+
+    // Cleanup method for proper resource disposal
+    dispose() {
+        // Remove all bullets from scene
+        this.bullets.forEach(bullet => {
+            this.scene.remove(bullet);
+        });
+        this.bullets = [];
+        
+        // Remove shared light
+        if (this.sharedLight) {
+            this.scene.remove(this.sharedLight);
+        }
+        
+        // Dispose of pooled materials and geometry
+        if (this.bulletPool) {
+            this.bulletPool.geometry.dispose();
+            this.bulletPool.normalMaterial.dispose();
+            this.bulletPool.criticalMaterial.dispose();
+            this.bulletPool.glitchedMaterial.dispose();
+        }
     }
 }
