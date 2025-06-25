@@ -478,5 +478,5 @@ interface GameState {
 ---
 
 **Desenvolvido com Three.js e TypeScript**  
-**Versão**: 1.0  
-**Data**: Dezembro 2024
+**Versão**: Alpha 1.1  
+**Data**: Julho 2025
