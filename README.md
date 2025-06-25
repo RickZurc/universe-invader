@@ -10,7 +10,7 @@
 7. [Sistema de Loja](#sistema-de-loja)
 8. [Menu de Debug](#menu-de-debug)
 9. [Configurações](#configurações)
-10. [Controles](#controles)
+10. [Controlos](#Controlos)
 11. [Instalação e Execução](#instalação-e-execução)
 
 ## Visão Geral
@@ -89,7 +89,7 @@ src/
   - Velocidade ajustável e tempo de vida limitado
   - Efeitos visuais com trails de partículas
   - Cleanup automático de mísseis expirados
-- **Controles**: Barra de espaço para disparar
+- **Controlos**: Barra de espaço para disparar
 - **Limitações**: Máximo de 10 mísseis simultâneos
 
 #### **EMPBombManager**  
@@ -391,23 +391,19 @@ MISSILE_PACK_AMOUNT: 3,
 SHIELD_DURATION: 15000            // 15 segundos
 ```
 
-## Controles
+## Controlos
 
-### Controles Básicos
-- **Movimento**: WASD ou setas direcionais
-- **Disparo**: Clique esquerdo do rato (auto-fire contínuo)
-- **Míssil Teleguiado**: Barra de espaço
-- **Pausa**: Tecla P
-- **Loja**: Tecla E (entre rondas)
+### Controlos Básicos
+- **Movimento**: WASD
+- **Disparo**: Barra de ESpaço
+- **Míssil Teleguiado**: Tecla R
 
-### Controles de Debug
+### Controlos de Debug
 - **Menu Debug**: Tecla J
 - **Debug Buttons**: Cliques nos botões da interface
 
-### Controles de UI
-- **Fechar Menus**: Tecla Escape ou botões X
+### Controlos de UI
 - **Aplicar Mudanças**: Botão "Apply Changes" no debug
-- **Navegação**: Mouse para todos os menus
 
 ## Instalação e Execução
 
