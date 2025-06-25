@@ -65,25 +65,28 @@ export class ParticleSystem {
         }
         
         animateExplosion();
-    }    static createThrusterParticles(): THREE.Points {
+    }      static createThrusterParticles(): THREE.Points {
         const thrusterGeometry = new THREE.BufferGeometry();
         const thrusterVertices = new Float32Array(150); // Reduced from 300 to 150 (50 particles)
-        const thrusterColors = new Float32Array(150); // Reduced from 300 to 150
-
-        // Initialize particles with random positions
+        const thrusterColors = new Float32Array(150); // Reduced from 300 to 150        // Initialize particles positioned behind the ship (inverse direction) - constant positioning
         for (let i = 0; i < 150; i += 3) {
-            thrusterVertices[i] = 0;
-            thrusterVertices[i + 1] = 0;
-            thrusterVertices[i + 2] = 0;
+            const particleIndex = i / 3;
+            const angle = (particleIndex / 50) * Math.PI * 2; // Evenly distribute particles in a circle
+            const radius = 0.15; // Constant radius for thruster nozzle
             
-            // Green to yellow colors for thrust
-            thrusterColors[i] = Math.random() * 0.5 + 0.5; // R: 0.5-1.0
-            thrusterColors[i + 1] = Math.random() * 0.5 + 0.5; // G: 0.5-1.0
-            thrusterColors[i + 2] = 0; // B: 0
+            // Start particles in a circular pattern behind the ship center
+            thrusterVertices[i] = Math.cos(angle) * radius; // X position
+            thrusterVertices[i + 1] = -0.3; // Constant Y position behind ship
+            thrusterVertices[i + 2] = Math.sin(angle) * radius; // Z position
+            
+            // Constant colors for thrust (orange/yellow flame)
+            thrusterColors[i] = 1.0; // R: full red
+            thrusterColors[i + 1] = 0.7; // G: orange-yellow
+            thrusterColors[i + 2] = 0.0; // B: no blue
         }
 
         thrusterGeometry.setAttribute('position', new THREE.BufferAttribute(thrusterVertices, 3));
-        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));        const thrusterMaterial = new THREE.PointsMaterial({
+        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));const thrusterMaterial = new THREE.PointsMaterial({
             size: 0.08, // Smaller thruster particles
             vertexColors: true,
             blending: THREE.AdditiveBlending,
