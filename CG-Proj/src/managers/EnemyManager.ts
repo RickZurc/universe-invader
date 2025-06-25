@@ -94,7 +94,7 @@ export class EnemyManager {    private scene: THREE.Scene;
             console.log('Created NormalEnemy - should load model (FORCED FOR TESTING)');
             
             // Original probability-based code commented out for testing:
-            /*
+         
             const rand = Math.random();
               if (rand < shifterChance) {
                 // Shifter enemies have low health but teleportation abilities
@@ -112,7 +112,7 @@ export class EnemyManager {    private scene: THREE.Scene;
                 enemy = new NormalEnemy(enemyGeometry, null!, Math.floor(baseHealth));
                 console.log('Created NormalEnemy - should load model');
             }
-            */
+            
         }
         
         // Position and add enemy

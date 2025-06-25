@@ -48,6 +48,12 @@ class Game {
     private lastShieldTime: number = 0;
     private isShieldActive: boolean = false;
     private shieldEndTime: number = 0;
+    
+    // FPS tracking
+    private fpsElement: HTMLElement | null = null;
+    private frameCount: number = 0;
+    private lastFpsUpdate: number = 0;
+    private fps: number = 0;
 
     constructor() {
         // Initialize managers
@@ -69,9 +75,53 @@ class Game {
 
         // Initialize damage popups
         DamagePopup.initialize();
-
-        this.setupEventListeners();
+        
+        // Initialize FPS counter
+        this.initializeFpsCounter();        this.setupEventListeners();
         this.initializeGame();
+    }
+
+    private initializeFpsCounter() {
+        // Create FPS counter element
+        this.fpsElement = document.createElement('div');
+        this.fpsElement.id = 'fps-counter';
+        this.fpsElement.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff41;
+            z-index: 1000;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        `;
+        this.fpsElement.textContent = 'FPS: 60';
+        document.body.appendChild(this.fpsElement);
+        
+        this.lastFpsUpdate = performance.now();
+    }
+
+    private updateFps() {
+        this.frameCount++;
+        const currentTime = performance.now();
+        
+        // Update FPS display every 500ms
+        if (currentTime - this.lastFpsUpdate >= 500) {
+            this.fps = Math.round((this.frameCount * 1000) / (currentTime - this.lastFpsUpdate));
+            this.frameCount = 0;
+            this.lastFpsUpdate = currentTime;
+            
+            if (this.fpsElement) {
+                this.fpsElement.textContent = `FPS: ${this.fps}`;
+            }
+        }
     }
 
     private setupEventListeners() {
@@ -716,35 +766,33 @@ class Game {
         // Screen flash effect
         this.uiManager.createScreenFlash();
         
-        console.log(`🌟 SUPER NOVA! Destroyed ${enemies.length} enemies for ${totalScore} points!`);
-        
+        console.log(`🌟 SUPER NOVA! Destroyed ${enemies.length} enemies for ${totalScore} points!`);        
         this.updateUI();
     }
 
     public animate() {
         requestAnimationFrame(() => this.animate());
 
-        // Update input state
-        this.inputManager.updateMouseWorldPosition(this.sceneManager.getCamera());
+        // Calculate and update FPS
+        this.updateFps();
 
-        // Update ability cooldown UIs
-        const now = Date.now();
+        // Update input state
+        this.inputManager.updateMouseWorldPosition(this.sceneManager.getCamera());        // Update ability cooldown UIs
+        const currentTime = Date.now();
         const knockbackCooldown = Math.max(0, 
-            (this.lastKnockbackTime + GameConfig.KNOCKBACK.COOLDOWN) - now
+            (this.lastKnockbackTime + GameConfig.KNOCKBACK.COOLDOWN) - currentTime
         );
         const empCooldown = Math.max(0,
-            (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - now
+            (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - currentTime
         );
         const shieldCooldown = Math.max(0,
-            (this.lastShieldTime + GameConfig.SHIELD_OVERDRIVE.COOLDOWN) - now
+            (this.lastShieldTime + GameConfig.SHIELD_OVERDRIVE.COOLDOWN) - currentTime
         );
         
         this.uiManager.updateKnockbackCooldown(knockbackCooldown, GameConfig.KNOCKBACK.COOLDOWN);
         this.uiManager.updateEMPCooldown(empCooldown, GameConfig.EMP_BOMB.COOLDOWN);
-        this.uiManager.updateShieldOverdriveCooldown(shieldCooldown, GameConfig.SHIELD_OVERDRIVE.COOLDOWN);
-
-        // Check if Shield Overdrive should end
-        if (this.isShieldActive && now >= this.shieldEndTime) {
+        this.uiManager.updateShieldOverdriveCooldown(shieldCooldown, GameConfig.SHIELD_OVERDRIVE.COOLDOWN);        // Check if Shield Overdrive should end
+        if (this.isShieldActive && currentTime >= this.shieldEndTime) {
             this.isShieldActive = false;
             this.playerManager.deactivateShieldOverdrive();
         }
@@ -753,10 +801,10 @@ class Game {
         if (!this.gameOver && !this.isStorePaused && !this.isDebugMode) {
             // Handle Shield Overdrive activation
             if (this.hasShieldOverdrive && this.inputManager.isShieldOverdrive && 
-                now - this.lastShieldTime >= GameConfig.SHIELD_OVERDRIVE.COOLDOWN) {
+                currentTime - this.lastShieldTime >= GameConfig.SHIELD_OVERDRIVE.COOLDOWN) {
                 this.isShieldActive = true;
-                this.lastShieldTime = now;
-                this.shieldEndTime = now + GameConfig.SHIELD_OVERDRIVE.DURATION;
+                this.lastShieldTime = currentTime;
+                this.shieldEndTime = currentTime + GameConfig.SHIELD_OVERDRIVE.DURATION;
                 this.playerManager.activateShieldOverdrive();
             }
 
@@ -846,9 +894,7 @@ class Game {
             if (activeEnemies === 0 && remainingToSpawn === 0) {
                 this.startNewRound();
             }
-        }
-
-        // Update camera and scene
+        }        // Update camera and scene
         this.sceneManager.updateCamera(this.playerManager.getShip().position);
         this.sceneManager.updateStarfield(this.sceneManager.getCamera().position);
         this.sceneManager.render();

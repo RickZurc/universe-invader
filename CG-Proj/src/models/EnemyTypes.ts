@@ -32,7 +32,6 @@ export class NormalEnemy extends Enemy {
                 model.scale.set(0.6, 0.6, 0.6);
                 model.rotation.set(90, Math.PI, 0);
                 
-                
                 // Apply red coloring to the model materials
                 model.traverse((child) => {
                     if (child instanceof THREE.Mesh && child.material) {
