@@ -162,4 +162,17 @@ export const GameConfig = {    // Initial player stats - more challenging early 
         STRAFE_SPEED: 0.06,       // Speed when moving sideways to maintain distance
         COLOR: 0x44ff44,          // Green color for Destroyer
     },
+
+    // Performance optimization settings
+    PERFORMANCE: {
+        FPS_THRESHOLD_LOW: 45,           // FPS below this enables performance mode
+        FPS_THRESHOLD_HIGH: 55,          // FPS above this disables performance mode
+        MAX_BULLETS: 60,                 // Maximum bullets on screen
+        MAX_PARTICLES: 200,              // Global particle limit
+        COLLISION_CHECK_FREQUENCY: 2,    // Check collisions every N frames in performance mode
+        UI_UPDATE_FREQUENCY: 10,         // Update UI every N frames in performance mode
+        ENEMY_UPDATE_FREQUENCY: 3,       // Update enemy health bars every N frames
+        PARTICLE_REDUCTION_FACTOR: 0.6,  // Reduce particles by 40% in performance mode
+    },
+
 } as const;

@@ -74,44 +74,50 @@ export class Enemy extends THREE.Mesh {
         if (!this.healthContainer || !this.healthBar) return;
 
         // Ensure camera matrices are up to date
-        if (!camera.matrixWorldInverse || camera.matrixWorldInverse.determinant() === 0) {
-            camera.updateMatrixWorld();
-            camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-        }
-
-        // Get the vector from the enemy to the camera
-        const vector = new THREE.Vector3();
-        this.getWorldPosition(vector);
+        camera.updateMatrixWorld();
         
-        // Project position to screen space
-        vector.project(camera);
+        // Get the world position of the enemy
+        const worldPosition = new THREE.Vector3();
+        this.getWorldPosition(worldPosition);
+        
+        // Project to screen coordinates
+        const screenPosition = worldPosition.clone().project(camera);
 
-        // Convert to screen coordinates
-        const widthHalf = window.innerWidth / 2;
-        const heightHalf = window.innerHeight / 2;
-        const x = Math.round(vector.x * widthHalf + widthHalf);
-        const y = Math.round(-vector.y * heightHalf + heightHalf);
+        // Check if the enemy is visible (in front of camera)
+        if (screenPosition.z < 1 && screenPosition.z > -1) {
+            // Convert normalized device coordinates to screen coordinates
+            const widthHalf = window.innerWidth / 2;
+            const heightHalf = window.innerHeight / 2;
+            
+            const x = Math.round(screenPosition.x * widthHalf + widthHalf);
+            const y = Math.round(-screenPosition.y * heightHalf + heightHalf);
 
-        // Only show if in front of camera
-        if (vector.z < 1) {
-            // Position health bar
-            this.healthContainer.style.display = 'block';
-            this.healthContainer.style.transform = `translate(-50%, -100%)`; // Center horizontally and position above
-            this.healthContainer.style.left = `${x}px`;
-            this.healthContainer.style.top = `${y - 20}px`; // 20px above enemy
+            // Check if position is within screen bounds
+            if (x >= -50 && x <= window.innerWidth + 50 && y >= -50 && y <= window.innerHeight + 50) {
+                // Show and position health bar
+                this.healthContainer.style.display = 'block';
+                this.healthContainer.style.left = `${x}px`;
+                this.healthContainer.style.top = `${y - 25}px`; // Position above enemy
+                this.healthContainer.style.transform = 'translate(-50%, 0)'; // Center horizontally
 
-            // Update health percentage and color
-            const healthPercent = Math.max(0, Math.min(100, (this.health / this.maxHealth) * 100));
-            this.healthBar.style.width = `${healthPercent}%`;
+                // Update health percentage and color
+                const healthPercent = Math.max(0, Math.min(100, (this.health / this.maxHealth) * 100));
+                this.healthBar.style.width = `${healthPercent}%`;
 
-            if (healthPercent > 60) {
-                this.healthBar.style.backgroundColor = '#00ff00'; // Green
-            } else if (healthPercent > 30) {
-                this.healthBar.style.backgroundColor = '#ffff00'; // Yellow
+                // Update color based on health percentage
+                if (healthPercent > 60) {
+                    this.healthBar.style.backgroundColor = '#00ff00'; // Green
+                } else if (healthPercent > 30) {
+                    this.healthBar.style.backgroundColor = '#ffff00'; // Yellow
+                } else {
+                    this.healthBar.style.backgroundColor = '#ff0000'; // Red
+                }
             } else {
-                this.healthBar.style.backgroundColor = '#ff0000'; // Red
+                // Hide if outside screen bounds
+                this.healthContainer.style.display = 'none';
             }
         } else {
+            // Hide if behind camera or too far
             this.healthContainer.style.display = 'none';
         }
     }
@@ -142,8 +148,27 @@ export class Enemy extends THREE.Mesh {
     }
 
     destroy() {
-        if (this.healthContainer && this.healthContainer.parentNode) {
-            this.healthContainer.parentNode.removeChild(this.healthContainer);
+        // Clean up health bar DOM elements
+        if (this.healthContainer) {
+            if (this.healthContainer.parentNode) {
+                this.healthContainer.parentNode.removeChild(this.healthContainer);
+            }
+            // Clear references to prevent memory leaks
+            this.healthContainer = null as any;
+            this.healthBar = null as any;
+        }
+        
+        // Clean up materials
+        if (this.normalMaterial) {
+            this.normalMaterial.dispose();
+        }
+        if (this.frozenMaterial) {
+            this.frozenMaterial.dispose();
+        }
+        
+        // Clean up geometry if it exists
+        if (this.geometry) {
+            this.geometry.dispose();
         }
     }
 

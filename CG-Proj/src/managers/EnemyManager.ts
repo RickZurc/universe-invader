@@ -224,16 +224,25 @@ export class EnemyManager {    private scene: THREE.Scene;
             this.lastSpawnTime = now;
         }
 
+        // Cache player position for performance
+        const playerPos = this.playerShip.position;
+        let updateCounter = 0;
+
         for (const enemy of this.enemies) {
             if (!(enemy instanceof Enemy)) continue;
 
-            // Update enemy stun state and health bar
+            // Always update stun state and health bar for proper positioning
             enemy.updateStunState();
             enemy.updateHealthBar(camera);
-            enemy.updateHitEffect();
+            
+            // Only update hit effects every few frames for performance (non-critical visual)
+            if (updateCounter % 3 === 0) {
+                enemy.updateHitEffect();
+            }
 
             // Skip movement if stunned or frozen
             if (enemy.isStunned() || enemy.isFrozenState()) {
+                updateCounter++;
                 continue;
             }
 
@@ -245,6 +254,7 @@ export class EnemyManager {    private scene: THREE.Scene;
                 } else {
                     this.enemiesBeingKnockedBack.delete(enemy);
                 }
+                updateCounter++;
                 continue;
             }            // Handle special enemy behaviors
             if (enemy instanceof DestroyerEnemy) {
@@ -269,7 +279,7 @@ export class EnemyManager {    private scene: THREE.Scene;
             } else {
                 // Normal enemy movement for other types
                 const direction = new THREE.Vector3()
-                    .copy(this.playerShip.position)
+                    .copy(playerPos)
                     .sub(enemy.position)
                     .normalize();
 
@@ -282,8 +292,10 @@ export class EnemyManager {    private scene: THREE.Scene;
 
             // Update enemy orientation to face player (except for Destroyers who handle their own orientation)
             if (!(enemy instanceof DestroyerEnemy)) {
-                enemy.lookAt(this.playerShip.position);
+                enemy.lookAt(playerPos);
             }
+            
+            updateCounter++;
         }
     }
 
@@ -292,14 +304,21 @@ export class EnemyManager {    private scene: THREE.Scene;
     }    removeEnemy(enemy: THREE.Mesh) {
         const index = this.enemies.indexOf(enemy);
         if (index > -1) {
+            // Remove from array first
             this.enemies.splice(index, 1);
-            this.scene.remove(enemy);
+            
+            // Clean up specific enemy types
             if (enemy instanceof DestroyerEnemy) {
                 enemy.cleanup(); // Clean up missiles
             }
+            
+            // Always call destroy for proper cleanup (including health bars)
             if (enemy instanceof Enemy) {
                 enemy.destroy();
             }
+            
+            // Remove from scene last
+            this.scene.remove(enemy);
         }
     }getRemainingEnemies() {
         return this.enemiesRemainingToSpawn;

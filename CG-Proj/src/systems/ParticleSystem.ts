@@ -1,8 +1,27 @@
 import * as THREE from 'three';
 
 export class ParticleSystem {
+    // Performance tracking for adaptive particle count
+    private static performanceMode: boolean = false;
+    private static activeParticleCount: number = 0;
+    private static maxParticles: number = 200; // Global particle limit
+    
+    static setPerformanceMode(enabled: boolean) {
+        this.performanceMode = enabled;
+    }
+    
     static createExplosion(scene: THREE.Scene, position: THREE.Vector3, color: number) {
-        const particleCount = 20; // Reduced from 50 to 20
+        // Skip explosion if too many particles are active
+        if (this.activeParticleCount > this.maxParticles) return;
+        
+        // Adaptive particle count based on performance
+        const baseParticleCount = this.performanceMode ? 8 : 15; // Reduced from 20/50
+        const particleCount = Math.min(baseParticleCount, this.maxParticles - this.activeParticleCount);
+        
+        if (particleCount <= 0) return;
+        
+        this.activeParticleCount += particleCount;
+        
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const velocities: THREE.Vector3[] = [];
@@ -14,16 +33,16 @@ export class ParticleSystem {
             positions[i + 2] = position.z;
             
             velocities.push(new THREE.Vector3(
-                (Math.random() - 0.5) * 0.3,
-                (Math.random() - 0.5) * 0.3,
-                (Math.random() - 0.5) * 0.3
+                (Math.random() - 0.5) * 0.25, // Reduced spread for performance
+                (Math.random() - 0.5) * 0.25,
+                (Math.random() - 0.5) * 0.25
             ));
         }
         
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-          const material = new THREE.PointsMaterial({
+        const material = new THREE.PointsMaterial({
             color: color,
-            size: 0.15, // Slightly smaller particles
+            size: this.performanceMode ? 0.1 : 0.15, // Smaller particles in performance mode
             blending: THREE.AdditiveBlending,
             transparent: true,
             opacity: 1
@@ -34,12 +53,15 @@ export class ParticleSystem {
         
         // Animation variables
         let life = 1.0;
-        const decay = 0.08; // Faster decay for quicker cleanup
-          function animateExplosion() {
+        const decay = this.performanceMode ? 0.12 : 0.08; // Faster decay in performance mode
+        
+        function animateExplosion() {
             if (life <= 0) {
                 scene.remove(particles);
                 geometry.dispose();
                 material.dispose();
+                // Decrement active particle count when cleaned up
+                ParticleSystem.activeParticleCount -= particleCount;
                 return;
             }
             
@@ -51,8 +73,8 @@ export class ParticleSystem {
                 positions[i + 1] += velocities[i/3].y;
                 positions[i + 2] += velocities[i/3].z;
                 
-                // Add some gravity effect
-                velocities[i/3].y -= 0.01;
+                // Reduced gravity effect for performance
+                velocities[i/3].y -= 0.005;
             }
             
             particles.geometry.attributes.position.needsUpdate = true;
@@ -65,13 +87,17 @@ export class ParticleSystem {
         }
         
         animateExplosion();
-    }      static createThrusterParticles(): THREE.Points {
+    }    static createThrusterParticles(): THREE.Points {
         const thrusterGeometry = new THREE.BufferGeometry();
-        const thrusterVertices = new Float32Array(150); // Reduced from 300 to 150 (50 particles)
-        const thrusterColors = new Float32Array(150); // Reduced from 300 to 150        // Initialize particles positioned behind the ship (inverse direction) - constant positioning
-        for (let i = 0; i < 150; i += 3) {
+        // Reduced from 150 to 90 (30 particles) for better performance
+        const particleCount = this.performanceMode ? 20 : 30;
+        const thrusterVertices = new Float32Array(particleCount * 3);
+        const thrusterColors = new Float32Array(particleCount * 3);
+
+        // Initialize particles positioned behind the ship (inverse direction) - constant positioning
+        for (let i = 0; i < particleCount * 3; i += 3) {
             const particleIndex = i / 3;
-            const angle = (particleIndex / 50) * Math.PI * 2; // Evenly distribute particles in a circle
+            const angle = (particleIndex / particleCount) * Math.PI * 2; // Evenly distribute particles in a circle
             const radius = 0.15; // Constant radius for thruster nozzle
             
             // Start particles in a circular pattern behind the ship center
@@ -86,12 +112,14 @@ export class ParticleSystem {
         }
 
         thrusterGeometry.setAttribute('position', new THREE.BufferAttribute(thrusterVertices, 3));
-        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));const thrusterMaterial = new THREE.PointsMaterial({
-            size: 0.08, // Smaller thruster particles
+        thrusterGeometry.setAttribute('color', new THREE.BufferAttribute(thrusterColors, 3));
+
+        const thrusterMaterial = new THREE.PointsMaterial({
+            size: this.performanceMode ? 0.06 : 0.08, // Smaller thruster particles in performance mode
             vertexColors: true,
             blending: THREE.AdditiveBlending,
             transparent: true,
-            opacity: 0.6 // Reduced opacity
+            opacity: this.performanceMode ? 0.4 : 0.6 // Reduced opacity in performance mode
         });
 
         return new THREE.Points(thrusterGeometry, thrusterMaterial);

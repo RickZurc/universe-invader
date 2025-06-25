@@ -54,6 +54,13 @@ class Game {
     private frameCount: number = 0;
     private lastFpsUpdate: number = 0;
     private fps: number = 0;
+    
+    // Performance optimization variables
+    private lastAnimationTime: number = 0;
+    private targetFrameTime: number = 16.67; // 60 FPS target
+    private performanceMode: boolean = false;
+    private skipFrameCounter: number = 0;
+    private updateCounter: number = 0;
 
     constructor() {
         // Initialize managers
@@ -612,15 +619,24 @@ class Game {
             }
         }
 
-        // Check bullet collisions with enemies
-        for (let bullet of bullets) {
-            for (let enemy of enemies) {
-                const bulletToEnemyDist = new THREE.Vector3()
-                    .copy(bullet.position)
-                    .sub(enemy.position)
-                    .length();
+        // Check bullet collisions with enemies (optimized)
+        const bulletArray = bullets;
+        const enemyArray = enemies;
+        
+        for (let i = 0; i < bulletArray.length; i++) {
+            const bullet = bulletArray[i];
+            if (!bullet.visible) continue; // Skip pooled bullets
+            
+            for (let j = 0; j < enemyArray.length; j++) {
+                const enemy = enemyArray[j];
+                
+                // Use squared distance for performance
+                const dx = bullet.position.x - enemy.position.x;
+                const dy = bullet.position.y - enemy.position.y;
+                const distanceSquared = dx * dx + dy * dy;
 
-                if (bulletToEnemyDist < 1) {                    // Check if bullet can hit this enemy (for piercing logic)
+                if (distanceSquared < 1) { // 1 squared = 1
+                    // Check if bullet can hit this enemy (for piercing logic)
                     if (!this.bulletManager.canBulletHitEnemy(bullet, enemy)) {
                         continue;
                     }
@@ -628,12 +644,21 @@ class Game {
                     const damage = this.bulletManager.getBulletDamageForBullet(bullet);
                     enemy.health = Math.max(0, enemy.health - damage);
                     enemy.startHitEffect();
-                    enemy.updateHealthBar(this.sceneManager.getCamera());                    // Show damage popup that follows the enemy
-                    DamagePopup.show(damage, enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), 
-                        this.sceneManager.getCamera(), { followTarget: enemy });
+                    
+                    // Only update health bar in performance mode every few frames
+                    if (!this.performanceMode) {
+                        enemy.updateHealthBar(this.sceneManager.getCamera());
+                    }
+
+                    // Show damage popup that follows the enemy (less frequently in performance mode)
+                    if (!this.performanceMode || this.updateCounter % 2 === 0) {
+                        DamagePopup.show(damage, enemy.position.clone().add(new THREE.Vector3(0, 1, 0)), 
+                            this.sceneManager.getCamera(), { followTarget: enemy });
+                    }
 
                     // Create glitched bullets if feature is enabled (only for non-glitched bullets to prevent recursion)
-                    if (this.bulletManager.getGlitchedBulletLevel() > 0 && !bullet.userData.isGlitched) {
+                    if (this.bulletManager.getGlitchedBulletLevel() > 0 && !bullet.userData.isGlitched && 
+                        (!this.performanceMode || Math.random() < 0.5)) {
                         this.bulletManager.createGlitchedBullets(
                             enemy.position.clone(),
                             this.enemyManager.getEnemies() as Enemy[],
@@ -773,25 +798,54 @@ class Game {
     public animate() {
         requestAnimationFrame(() => this.animate());
 
+        const currentTime = performance.now();
+
+        // Adaptive performance mode based on FPS
+        if (this.fps < 45) {
+            if (!this.performanceMode) {
+                this.performanceMode = true;
+                ParticleSystem.setPerformanceMode(true);
+                console.log('🔧 Performance mode enabled (FPS < 45)');
+            }
+        } else if (this.fps > 55) {
+            if (this.performanceMode) {
+                this.performanceMode = false;
+                ParticleSystem.setPerformanceMode(false);
+                console.log('✨ Performance mode disabled (FPS > 55)');
+            }
+        }
+
         // Calculate and update FPS
         this.updateFps();
 
-        // Update input state
-        this.inputManager.updateMouseWorldPosition(this.sceneManager.getCamera());        // Update ability cooldown UIs
-        const currentTime = Date.now();
-        const knockbackCooldown = Math.max(0, 
-            (this.lastKnockbackTime + GameConfig.KNOCKBACK.COOLDOWN) - currentTime
-        );
-        const empCooldown = Math.max(0,
-            (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - currentTime
-        );
-        const shieldCooldown = Math.max(0,
-            (this.lastShieldTime + GameConfig.SHIELD_OVERDRIVE.COOLDOWN) - currentTime
-        );
-        
-        this.uiManager.updateKnockbackCooldown(knockbackCooldown, GameConfig.KNOCKBACK.COOLDOWN);
-        this.uiManager.updateEMPCooldown(empCooldown, GameConfig.EMP_BOMB.COOLDOWN);
-        this.uiManager.updateShieldOverdriveCooldown(shieldCooldown, GameConfig.SHIELD_OVERDRIVE.COOLDOWN);        // Check if Shield Overdrive should end
+        // Skip heavy operations if performance is poor
+        this.updateCounter++;
+        const shouldSkipFrame = this.performanceMode && (this.updateCounter % 2 === 0);
+
+        if (!shouldSkipFrame) {
+            // Update input state
+            this.inputManager.updateMouseWorldPosition(this.sceneManager.getCamera());
+        }
+
+        // Update ability cooldown UIs (less frequently in performance mode)
+        if (!this.performanceMode || this.updateCounter % 3 === 0) {
+            const currentTime = Date.now();
+            const knockbackCooldown = Math.max(0, 
+                (this.lastKnockbackTime + GameConfig.KNOCKBACK.COOLDOWN) - currentTime
+            );
+            const empCooldown = Math.max(0,
+                (this.lastEMPTime + GameConfig.EMP_BOMB.COOLDOWN) - currentTime
+            );
+            const shieldCooldown = Math.max(0,
+                (this.lastShieldTime + GameConfig.SHIELD_OVERDRIVE.COOLDOWN) - currentTime
+            );
+            
+            this.uiManager.updateKnockbackCooldown(knockbackCooldown, GameConfig.KNOCKBACK.COOLDOWN);
+            this.uiManager.updateEMPCooldown(empCooldown, GameConfig.EMP_BOMB.COOLDOWN);
+            this.uiManager.updateShieldOverdriveCooldown(shieldCooldown, GameConfig.SHIELD_OVERDRIVE.COOLDOWN);
+        }
+
+        // Check if Shield Overdrive should end
         if (this.isShieldActive && currentTime >= this.shieldEndTime) {
             this.isShieldActive = false;
             this.playerManager.deactivateShieldOverdrive();
@@ -879,14 +933,25 @@ class Game {
             }            // Update game objects
             this.bulletManager.updateBullets();
             this.enemyManager.updateEnemies(this.sceneManager.getCamera());
-            this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);
+            
+            // Less critical updates (can be skipped in performance mode)
+            if (!this.performanceMode || this.updateCounter % 2 === 0) {
+                this.empBombManager.updateEMPs(this.enemyManager.getEnemies() as Enemy[]);
+                this.powerUpManager.update();
+                
+                // Collision detection (expensive but necessary)
+                this.handleCollisions();
+            }
 
-            // Update enemy indicators when 10 or fewer enemies remain
-            this.uiManager.updateEnemyIndicators(
-                this.enemyManager.getEnemies() as Enemy[],
-                this.sceneManager.getCamera(),
-                this.playerManager.getShip().position
-            );
+            // Update enemy indicators only when needed and less frequently
+            const enemies = this.enemyManager.getEnemies() as Enemy[];
+            if (enemies.length <= 10 && (!this.performanceMode || this.updateCounter % 5 === 0)) {
+                this.uiManager.updateEnemyIndicators(
+                    enemies,
+                    this.sceneManager.getCamera(),
+                    this.playerManager.getShip().position
+                );
+            }
 
             // Check round completion
             const activeEnemies = this.enemyManager.getEnemies().length;

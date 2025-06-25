@@ -17,10 +17,13 @@ export class BulletManager {
     private piercingLevel: number = 0; // Level 0 = no piercing, Level 1+ = piercing
     private superBulletLevel: number = 0; // Level 0 = no critical hits, Level 1+ = critical hits
     private glitchedBulletLevel: number = 0; // Level 0 = no glitched bullets, Level 1+ = glitched bullets
-    // Object pooling for performance
+    
+    // Enhanced object pooling for performance
     private bulletPool!: BulletPool;
-    private maxBullets: number = 75; // Limit total bullets to prevent performance issues
+    private maxBullets: number = 60; // Reduced from 75 to 60 for better performance
     private sharedLight!: THREE.PointLight; // Single shared light instead of per-bullet lights
+    private bulletPoolArray: THREE.Mesh[] = []; // Pre-instantiated bullet pool
+    private poolSize: number = 30; // Pool of reusable bullets
 
     constructor(scene: THREE.Scene, playerShip: THREE.Group) {
         this.scene = scene;
@@ -28,6 +31,34 @@ export class BulletManager {
         this.bulletDamage = GameConfig.INITIAL_BULLET_DAMAGE;
         this.initializeBulletPool();
         this.initializeSharedLight();
+        this.preCreateBulletPool();
+    }
+
+    private preCreateBulletPool() {
+        // Pre-create bullets for object pooling
+        for (let i = 0; i < this.poolSize; i++) {
+            const bullet = new THREE.Mesh(this.bulletPool.geometry, this.bulletPool.normalMaterial);
+            bullet.visible = false;
+            this.bulletPoolArray.push(bullet);
+        }
+    }
+
+    private getBulletFromPool(): THREE.Mesh | null {
+        // Try to reuse an existing bullet from the pool
+        for (const bullet of this.bulletPoolArray) {
+            if (!bullet.visible) {
+                bullet.visible = true;
+                bullet.scale.set(1, 1, 1); // Reset scale
+                return bullet;
+            }
+        }
+        return null; // Pool exhausted
+    }
+
+    private returnBulletToPool(bullet: THREE.Mesh) {
+        bullet.visible = false;
+        bullet.userData = {}; // Clear user data
+        // Don't remove from scene, just hide it for reuse
     }
 
     private initializeBulletPool() {
@@ -126,28 +157,42 @@ export class BulletManager {
         this.updateSharedLight();
     } 
     updateBullets() {
+        // Process bullets in reverse order for safe removal
+        const bulletSpeed = GameConfig.BULLET_SPEED;
+        const maxDistance = 30;
+        const playerPos = this.playerShip.position;
+        
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
+            
+            // Skip invisible/pooled bullets
+            if (!bullet.visible) continue;
 
             // Handle movement for different bullet types
             if (bullet.userData.isGlitched) {
                 // Glitched bullets use their stored direction and speed
-                const speed = bullet.userData.speed || GameConfig.BULLET_SPEED;
+                const speed = bullet.userData.speed || bulletSpeed;
                 bullet.position.add(bullet.userData.direction.clone().multiplyScalar(speed));
             } else {
-                // Regular bullets use the old system
-                const bulletSpeed = GameConfig.BULLET_SPEED;
+                // Regular bullets use the old system (optimized)
                 bullet.position.x += bullet.userData.directionX * bulletSpeed;
                 bullet.position.y += bullet.userData.directionY * bulletSpeed;
             }
 
-            if (bullet.position.distanceTo(this.playerShip.position) > 30) {
+            // Distance check with squared distance for performance
+            const dx = bullet.position.x - playerPos.x;
+            const dy = bullet.position.y - playerPos.y;
+            const distanceSquared = dx * dx + dy * dy;
+            
+            if (distanceSquared > maxDistance * maxDistance) {
                 this.removeBulletAtIndex(i);
             }
         }
 
-        // Update shared light position
-        this.updateSharedLight();
+        // Update shared light position less frequently
+        if (this.bullets.length > 0) {
+            this.updateSharedLight();
+        }
     }
 
     private removeBulletAtIndex(index: number) {
