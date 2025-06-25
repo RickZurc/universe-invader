@@ -82,16 +82,48 @@ src/
 ### Sistemas Auxiliares
 
 #### **MissileManager**
-- Mísseis teleguiados do jogador
-- Sistema de targeting automático
+- **Funcionalidade**: Gestão completa de mísseis teleguiados do jogador
+- **Características**:
+  - Sistema de targeting automático para inimigo mais próximo
+  - Trajetória curva com interpolação suave
+  - Velocidade ajustável e tempo de vida limitado
+  - Efeitos visuais com trails de partículas
+  - Cleanup automático de mísseis expirados
+- **Controles**: Barra de espaço para disparar
+- **Limitações**: Máximo de 10 mísseis simultâneos
 
-#### **EMPBombManager**
-- Bombas EMP que paralisam inimigos
-- Efeitos de área
+#### **EMPBombManager**  
+- **Funcionalidade**: Sistema de bombas EMP que paralisam inimigos
+- **Características**:
+  - Efeito de área que afeta todos os inimigos no ecrã
+  - Duração de paralisia configurável (5 segundos base)
+  - Efeitos visuais com ondas expansivas roxas
+  - Sistema de cooldown para evitar spam
+  - Integração com power-ups raros
+- **Ativação**: Automática ao coletar power-up ou manual via debug
+- **Visual**: Onda de energia roxa que se expande pelo ecrã
 
 #### **NaniteDroneManager**
-- Drones que reparam automaticamente a nave
-- Regeneração de vida
+- **Funcionalidade**: Drones autônomos que reparam a nave do jogador
+- **Características**:
+  - Regeneração automática de vida (5 HP por segundo)
+  - Órbita em torno da nave jogadora
+  - Visual distintivo com efeito de brilho verde
+  - Sistema de stack (múltiplos drones = mais regeneração)
+  - Duração limitada por drone (30 segundos cada)
+- **Obtenção**: Power-up raro ou compra na loja
+- **Máximo**: 5 drones simultâneos para balanceamento
+
+#### **ParticleSystemManager**
+- **Funcionalidade**: Sistema centralizado para todos os efeitos visuais
+- **Efeitos Suportados**:
+  - Explosões multi-coloridas baseadas no tipo de objeto
+  - Trails de mísseis e projéteis especiais
+  - Efeitos de teletransporte (anéis laranjas)
+  - Super Nova (explosões em cascata douradas)
+  - Ondas EMP (energia roxa expansiva)
+- **Otimizações**: Object pooling e cleanup automático
+- **Performance**: Limite dinâmico baseado na performance do dispositivo
 
 ## Sistemas de Jogo
 
